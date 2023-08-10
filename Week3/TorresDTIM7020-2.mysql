@@ -1,10 +1,18 @@
 USE mydatabase;
 
-CREATE TABLE us_states_territories (
-    state_name VARCHAR(50),
-    postal_abbreviation CHAR(2)
-);
+-- Create congressional chambers table
+DROP TABLE IF EXISTS chamber;
+CREATE TABLE chamber (
+    id TINYINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50));
+INSERT INTO chamber (name)
+    VALUES ('Senate'), ('House');
 
+-- Create US states and territories table
+DROP TABLE IF EXISTS us_states_territories;
+CREATE TABLE us_states_territories (
+    postal_abbreviation CHAR(2) PRIMARY KEY,
+    state_name VARCHAR(50));
 INSERT INTO us_states_territories (state_name, postal_abbreviation)
 VALUES
     ('Alabama', 'AL'),
@@ -64,26 +72,322 @@ VALUES
     ('Wisconsin', 'WI'),
     ('Wyoming', 'WY');
 
-ALTER TABLE us_states_territories
-ADD PRIMARY KEY (state_name);
-
+-- Create congress table, insert House members
+DROP TABLE IF EXISTS congress;
 CREATE TABLE congress AS
+    SELECT 
+        `house-rep-bioguide-id` AS id,
+        `congressional-district` AS represents,
+        `house-rep-last-name` AS last_name,
+        `house-rep-first-name` AS first_name,
+        `house-rep-full-address` AS address,
+        `house-rep-url` as url,
+        `house-rep-gender` AS gender_id,
+        `house-rep-dob` AS dob_text,
+        `house-rep-party` AS party_text
+    FROM mytemp.house;
+-- Add Senators
+INSERT INTO congress (
+    id, 
+    represents, 
+    last_name, 
+    first_name, 
+    address, 
+    url,
+    gender_id, 
+    dob_text, 
+    party_text)
 SELECT 
-`house-rep-bioguide-id` AS id,
-`congressional-district` AS district,
-`house-rep-last-name` AS last_name,
-`house-rep-first-name` AS first_name,
-`house-rep-full-address` AS address,
-`house-rep-dob` AS dob_text,
-`house-rep-gender` AS gender,
-`house-rep-party` AS party,
-`house-rep-phone` as phone,
-`house-rep-url` as url
-FROM mytemp.house;
+    `ï»¿sen1-bioguide-id` AS id,
+    `inst-state-geo` AS represents,
+    `sen1-last-name` AS last_name,
+    `sen1-first-name` AS first_name,
+    `sen1-full-address` AS address,
+    `sen1-url` as url,
+    `sen1-gender` AS gender_id,
+    `sen1-dob` AS dob_text,
+    `sen1-party` AS party_text
+FROM mytemp.senate1;
+INSERT INTO congress (
+    id, 
+    represents, 
+    last_name, 
+    first_name, 
+    address,
+    url, 
+    gender_id, 
+    dob_text, 
+    party_text)
+SELECT 
+    `ï»¿sen2-bioguide-id` AS id,
+    `inst-state-geo` AS represents,
+    `sen2-last-name` AS last_name,
+    `sen2-first-name` AS first_name,
+    `sen2-full-address` AS address,
+    `sen2-url` as url,
+    `sen2-gender` AS gender_id,
+    `sen2-dob` AS dob_text,
+    `sen2-party` AS party_text
+FROM mytemp.senate2;
 
+-- Delete rows without an id
+DELETE FROM congress WHERE id = '';
+-- Verify congress table
+SELECT COUNT(*) from congress;
+
+-- Add dob, gender, and party as code
 ALTER TABLE congress
-ADD dob DATETIME;
+    ADD chamber_id TINYINT,
+    ADD state CHAR(2),
+    ADD dob DATETIME,
+    ADD born_male BOOLEAN,
+    ADD party_id TINYINT;
 
+
+-- Create political party table
+DROP TABLE IF EXISTS party;
+CREATE TABLE party (
+    id TINYINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50));
+-- Insert distinct party names into party table
+INSERT INTO party (name)
+    SELECT DISTINCT party_text 
+        FROM congress 
+        ORDER BY party_text;
+-- Visually verify table
+SELECT * FROM party;
+
+
+-- Update born_male field, before accepting new gender_id values
 UPDATE congress
-SET dob = STR_TO_DATE(dob_text, '%c/%e/%Y');
+    SET born_male = (CASE WHEN UPPER(gender_id) = 'M' THEN 1 ELSE 0 END);
 
+-- Update congress table with party_id
+UPDATE congress
+    JOIN party ON congress.party_text = party.name
+    SET congress.party_id = party.id;
+
+-- Update the dob field
+SET @@SESSION.sql_mode='ALLOW_INVALID_DATES';
+-- Convert string value to datetime value
+UPDATE congress
+    SET dob = STR_TO_DATE(TRIM(dob_text), '%m/%d/%Y');
+-- Visually verify update
+SELECT dob_text, dob FROM congress LIMIT 10;
+
+-- Add state field
+UPDATE congress 
+    SET state = SUBSTR(represents, 1, 2);
+-- Visually verify congress
+SELECT represents, state FROM congress LIMIT 10;
+
+-- Add chamber field
+UPDATE congress
+    SET chamber_id = (CASE WHEN LENGTH(represents) = 2 THEN 1 ELSE 2 END);
+-- Visually verify changes
+SELECT * FROM congress LIMIT 10;
+
+-- Swap tables
+CREATE TABLE congress1 AS
+    SELECT id,
+        chamber_id,
+        state,
+        represents,
+        last_name,
+        first_name,
+        address,
+        url,
+        gender_id,
+        born_male,
+        dob,
+        party_id
+    FROM congress;
+DROP TABLE congress;
+ALTER TABLE congress1 
+    RENAME TO congress;
+
+-- Alter congress data types/names
+ALTER TABLE congress
+    CHANGE COLUMN id id CHAR(7),
+    CHANGE COLUMN represents district CHAR(5),
+    CHANGE COLUMN gender_id gender_id CHAR(1);
+
+-- Add primary key constraint
+ALTER TABLE congress
+    ADD PRIMARY KEY (id);
+-- Add FK to party table
+ALTER TABLE congress
+    ADD CONSTRAINT fk_party_id
+        FOREIGN KEY (party_id) 
+        REFERENCES party(id)
+        ON DELETE NO ACTION
+        ON UPDATE NO ACTION;
+-- Add FK to us_states_territories table
+ALTER TABLE congress
+    ADD CONSTRAINT fk_state
+        FOREIGN KEY (state)
+        REFERENCES us_states_territories (postal_abbreviation)
+        ON DELETE NO ACTION
+        ON UPDATE NO ACTION;
+-- Add FK to chamber table
+ALTER TABLE congress 
+    ADD CONSTRAINT fk_chamber_id
+        FOREIGN KEY (chamber_id) REFERENCES chamber(id)
+        ON DELETE NO ACTION
+        ON UPDATE NO ACTION;
+
+
+-- Create naics table
+DROP TABLE IF EXISTS naics;
+CREATE TABLE naics AS
+    SELECT 
+        `ï»¿naics-code` AS code,
+        `naics-description` AS description
+    FROM mytemp.naics;
+-- Add primary key constraint
+ALTER TABLE naics
+    CHANGE COLUMN code code CHAR(6);
+ALTER TABLE naics
+    ADD PRIMARY KEY (code);
+
+
+-- Create institution table
+DROP TABLE IF EXISTS institution;
+CREATE TABLE institution AS
+    SELECT 
+        ï»¿IPEDSID as ipeds_id,
+        NAME as name,
+        ADDRESS as address1,
+        ADDRESS2 as address2,
+        CITY as city,
+        STATE as state,
+        ZIP as zip,
+        ZIP4 as zip4,
+        TELEPHONE as phone,
+        COUNTY as county,
+        COUNTRY as country,
+        LATITUDE as latitude,
+        LONGITUDE as longitude,
+        POPULATION as population,
+        NAICS_CODE as naics_code
+    FROM mytemp.institution;
+
+-- data clean up
+UPDATE institution
+    SET zip = LPAD(zip, 5, '0');
+UPDATE institution
+    SET zip4 = LPAD(zip4, 4, '0');
+
+SELECT zip FROM institution where LENGTH(zip) < 5;
+
+ ALTER TABLE institution
+    CHANGE COLUMN ipeds_id ipeds_id CHAR(6),
+    CHANGE COLUMN state state CHAR(2),
+    CHANGE COLUMN zip zip CHAR(5),
+    CHANGE COLUMN zip4 zip4 CHAR(4),
+    CHANGE COLUMN country country CHAR(2),
+    CHANGE COLUMN naics_code naics_code CHAR(6);
+
+UPDATE institution
+    SET address2 = ''
+    WHERE address2 = 'NOT AVAILABLE';
+
+DROP TABLE IF EXISTS institution_to_congress;
+CREATE TABLE institution_to_congress
+    SELECT
+        ï»¿id_ipeds as ipeds_id,
+        id_bioguide_rep as house_id,
+        id_bioguide_sen1 as senate1_id,
+        id_bioguide_sen2 as senate2_id
+    FROM mytemp.ipeds_data_encoded;
+ 
+ ALTER TABLE institution_to_congress
+    CHANGE COLUMN ipeds_id ipeds_id CHAR(6),
+    CHANGE COLUMN house_id house_id CHAR(7),
+    CHANGE COLUMN senate1_id senate1_id CHAR(7),
+    CHANGE COLUMN senate2_id senate2_id CHAR(7);
+
+--- clean up before setting PK & FKs
+DELETE FROM institution WHERE ipeds_id IN (
+    SELECT ipeds_id 
+        FROM institution_to_congress
+        WHERE senate1_id not in (
+            SELECT id
+                FROM congress
+        )
+);
+DELETE FROM institution WHERE ipeds_id IN (
+    SELECT ipeds_id 
+        FROM institution_to_congress
+        WHERE senate2_id not in (
+            SELECT id
+                FROM congress
+        )
+);
+DELETE FROM institution WHERE ipeds_id IN (
+    SELECT ipeds_id 
+        FROM institution_to_congress
+        WHERE house_id not in (
+            SELECT id
+                FROM congress
+        )
+);
+DELETE FROM institution_to_congress
+    WHERE senate1_id not in (
+        SELECT id
+            FROM congress
+    );
+DELETE FROM institution_to_congress
+    WHERE senate2_id not in (
+        SELECT id
+            FROM congress
+    );
+DELETE FROM institution_to_congress
+    WHERE house_id not in (
+        SELECT id
+            FROM congress
+    );
+
+-- Set PKs for institution and linking table
+ALTER TABLE institution
+    ADD PRIMARY KEY (ipeds_id);
+ALTER TABLE institution_to_congress
+    ADD PRIMARY KEY (ipeds_id);
+-- Add FKs to congress table
+ALTER TABLE institution_to_congress
+    ADD CONSTRAINT fk_house_id
+        FOREIGN KEY (house_id) 
+        REFERENCES congress(id)
+        ON DELETE NO ACTION
+        ON UPDATE NO ACTION;
+ALTER TABLE institution_to_congress
+    ADD CONSTRAINT fk_senate1_id
+        FOREIGN KEY (senate1_id)
+        REFERENCES congress(id)
+        ON DELETE NO ACTION
+        ON UPDATE NO ACTION;
+ALTER TABLE institution_to_congress
+    ADD CONSTRAINT fk_senate2_id
+        FOREIGN KEY (senate2_id)
+        REFERENCES congress(id)
+        ON DELETE NO ACTION
+        ON UPDATE NO ACTION;
+-- Add FKs to institution table
+ALTER TABLE institution_to_congress
+    ADD CONSTRAINT fk_ipeds_id
+        FOREIGN KEY (ipeds_id)
+        REFERENCES institution(ipeds_id)
+        ON DELETE NO ACTION
+        ON UPDATE NO ACTION;
+ALTER TABLE institution
+    ADD CONSTRAINT fk_naics_code
+        FOREIGN KEY (naics_code)
+        REFERENCES naics(code)
+        ON DELETE NO ACTION
+        ON UPDATE NO ACTION;
+ALTER TABLE institution
+    ADD CONSTRAINT fk_state_postal_abbrevation
+        FOREIGN KEY (state)
+        REFERENCES us_states_territories(postal_abbreviation)
+        ON DELETE NO ACTION
+        ON UPDATE NO ACTION;
