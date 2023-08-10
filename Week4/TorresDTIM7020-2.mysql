@@ -1,6 +1,6 @@
 -- Use mydatabase
 USE mydatabase;
-/*
+
 -- Create congress_office table from imported data in mytemp database
 DROP TABLE IF EXISTS congress_office;
 CREATE TABLE congress_office AS
@@ -51,10 +51,10 @@ CHANGE COLUMN id id CHAR(7);
 ALTER TABLE congress_office
 ADD CONSTRAINT fk_congress_office_congress
 FOREIGN KEY (id) REFERENCES congress(id);
-*/
+
 -- Drop the address field from the congress table
--- ALTER TABLE congress
--- DROP COLUMN address;
+ALTER TABLE congress
+    DROP COLUMN address;
 
 -- Create institution_imputation_description table
 CREATE TABLE institution_imputation_description (
@@ -380,7 +380,7 @@ ALTER TABLE institution_salaries
 	CHANGE COLUMN SA12MAW avg_salary_contract_12_month_women INT COMMENT 'Average salary for instructional staff on 12-month contract-women', 
 	CHANGE COLUMN XSA12MAW avg_salary_contract_12_month_women_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Average salary for instructional staff on 12-month contract-women (Imputed Code)';
 
-    -- Create FK contraint between institution_salaries and institution based on 'ipeds_id' PK in institution
+-- Create FK contraint between institution_salaries and institution based on 'ipeds_id' PK in institution
 ALTER TABLE institution_salaries
     ADD CONSTRAINT fk_institution_salaries_institution
     FOREIGN KEY (ipeds_id) REFERENCES institution(ipeds_id);
