@@ -1,66 +1,245 @@
 -- Use mydatabase
 USE mydatabase;
 
--- Create congress_office table from imported data in mytemp database
-DROP TABLE IF EXISTS congress_office;
-CREATE TABLE congress_office AS
-    SELECT 
-        bioguide as id,
-        id as office_id,
-        address as address,
-        building as building,
-        suite as suite,
-        city as city,
-        state as state,
-        zip as zip
-    FROM mytemp.offices;
+-- -- Create congress_office table from imported data in mytemp database
+-- DROP TABLE IF EXISTS congress_office;
+-- CREATE TABLE congress_office AS
+--     SELECT 
+--         bioguide as id,
+--         id as office_id,
+--         address as address,
+--         building as building,
+--         suite as suite,
+--         city as city,
+--         state as state,
+--         zip as zip
+--     FROM mytemp.offices;
 
--- Count the number of congressional offices at the state level
-SELECT COUNT(*) FROM congress_office;
+-- -- Count the number of congressional offices at the state level
+-- SELECT COUNT(*) FROM congress_office;
 
--- Parse the address field from the congress table and 
--- insert the values into the congress_office, we'll drop the column last
-INSERT INTO congress_office (id, office_id, address, building, suite, city, state, zip)
-    SELECT
-        id,
-        LOWER(CONCAT(id, '__DC')) AS office_id,
-        TRIM(SUBSTRING_INDEX(Address, 'Washington ', 1)) AS address,
-        '' AS building,
-        '' AS suite,
-        'Washington' AS city,
-        'DC' AS state,
-        LEFT(SUBSTRING_INDEX(Address, 'DC ', -1), 5) AS zip
-    FROM (
-        SELECT id, address 
-        FROM mydatabase.congress
-    ) AS AddressTable;
+-- -- Parse the address field from the congress table and 
+-- -- insert the values into the congress_office, we'll drop the column last
+-- INSERT INTO congress_office (id, office_id, address, building, suite, city, state, zip)
+--     SELECT
+--         id,
+--         LOWER(CONCAT(id, '__DC')) AS office_id,
+--         TRIM(SUBSTRING_INDEX(Address, 'Washington ', 1)) AS address,
+--         '' AS building,
+--         '' AS suite,
+--         'Washington' AS city,
+--         'DC' AS state,
+--         LEFT(SUBSTRING_INDEX(Address, 'DC ', -1), 5) AS zip
+--     FROM (
+--         SELECT id, address 
+--         FROM mydatabase.congress
+--     ) AS AddressTable;
 
--- Count all of the congressional office address (state and federal)
-SELECT COUNT(*) FROM congress_office ORDER BY id, office_id;
+-- -- Count all of the congressional office address (state and federal)
+-- SELECT COUNT(*) FROM congress_office ORDER BY id, office_id;
 
--- Create a backup of the congress table before normalizing addresses out of the table
-DROP TABLE IF EXISTS congress_temp;
-CREATE TABLE congress_temp AS
-    SELECT * FROM congress;
+-- -- Create a backup of the congress table before normalizing addresses out of the table
+-- DROP TABLE IF EXISTS congress_temp;
+-- CREATE TABLE congress_temp AS
+--     SELECT * FROM congress;
 
--- Convert congress_office.id field to CHAR(7) to match congress.id
-ALTER TABLE congress_office
-CHANGE COLUMN id id CHAR(7);
+-- -- Convert congress_office.id field to CHAR(7) to match congress.id
+-- ALTER TABLE congress_office
+-- 	CHANGE COLUMN id id CHAR(7);
 
--- Create FK contraint between congress_office and congress based on 'id' PK in congress
-ALTER TABLE congress_office
-ADD CONSTRAINT fk_congress_office_congress
-FOREIGN KEY (id) REFERENCES congress(id);
+-- -- Create FK contraint between congress_office and congress based on 'id' PK in congress
+-- ALTER TABLE congress_office
+-- 	ADD CONSTRAINT fk_congress_office_congress
+-- 	FOREIGN KEY (id) REFERENCES congress(id);
 
--- Drop the address field from the congress table
-ALTER TABLE congress
-    DROP COLUMN address;
+-- -- Drop the address field from the congress table
+-- ALTER TABLE congress
+--     DROP COLUMN address;
 
+-- Drop the temp table
+-- DROP TABLE congress_temp;
+
+/*
+Bring in IPEDS 2021 data
+*/
+
+-- Copy 2018 institution table to institution_2018
+DROP TABLE IF EXISTS institution_2018;
+CREATE TABLE institution_2018 AS
+	SELECT * FROM institution;
+
+-- Drop and recreate institution_temp table
+DROP TABLE IF EXISTS institution_temp;
+CREATE TABLE institution_temp AS
+	SELECT * FROM mytemp.hd2021;
+
+UPDATE institution_temp SET
+	INSTNM = CASE WHEN INSTNM = '' THEN 'Not Available' ELSE INSTNM END, #TEXT
+	IALIAS = CASE WHEN IALIAS = '' THEN NULL ELSE IALIAS END,
+	ADDR = CASE WHEN ADDR = '' THEN 'Not Available' ELSE ADDR END,
+	CITY = CASE WHEN CITY = '' THEN 'Not Available' ELSE CITY END, 
+	STABBR = CASE WHEN STABBR = '' THEN 'ZZ' ELSE STABBR END, 
+	ZIP = CASE WHEN ZIP = '' THEN NULL ELSE ZIP END, 
+	FIPS = CASE WHEN FIPS = '' THEN '0' ELSE FIPS END, 
+	OBEREG = CASE WHEN OBEREG = '' THEN '0' ELSE OBEREG END, 
+	CHFNM = CASE WHEN CHFNM = '' THEN 'Not Availalble' ELSE CHFNM END, 
+	CHFTITLE = CASE WHEN CHFTITLE = '' THEN 'Not Available' ELSE CHFTITLE END, 
+	GENTELE = CASE WHEN GENTELE = '' THEN 'Not Available' ELSE GENTELE END, 
+	EIN = CASE WHEN EIN = '' THEN 'Not Available' ELSE EIN END, 
+	DUNS = CASE WHEN DUNS = '' THEN 'Not Available' ELSE DUNS END, 
+	OPEID = CASE WHEN OPEID = '' THEN 'Not Available' ELSE OPEID END, 
+	OPEFLAG = CASE WHEN OPEFLAG = '' THEN '0' ELSE OPEFLAG END, 
+	WEBADDR = CASE WHEN WEBADDR = '' THEN 'Not Available' ELSE WEBADDR END, 
+	ADMINURL = CASE WHEN ADMINURL = '' THEN 'Not Available' ELSE ADMINURL END, 
+	FAIDURL = CASE WHEN FAIDURL = '' THEN 'Not Available' ELSE FAIDURL END, 
+	APPLURL = CASE WHEN APPLURL = '' THEN 'Not Available' ELSE APPLURL END, 
+	NPRICURL = CASE WHEN NPRICURL = '' THEN 'Not Available' ELSE NPRICURL END, 
+	VETURL = CASE WHEN VETURL = '' THEN 'Not Available' ELSE VETURL END, 
+	ATHURL = CASE WHEN ATHURL = '' THEN 'Not Available' ELSE ATHURL END, 
+	DISAURL = CASE WHEN DISAURL = '' THEN 'Not Available' ELSE DISAURL END, 
+	SECTOR = CASE WHEN SECTOR = '' THEN '-9' ELSE SECTOR END, 
+	ICLEVEL = CASE WHEN ICLEVEL = '' THEN '-9' ELSE ICLEVEL END, 
+	CONTROL = CASE WHEN CONTROL = '' THEN '-9' ELSE CONTROL END, 
+	HLOFFER = CASE WHEN HLOFFER = '' THEN '-9' ELSE HLOFFER END, 
+	UGOFFER = CASE WHEN UGOFFER = '' THEN '-9' ELSE UGOFFER END, 
+	GROFFER = CASE WHEN GROFFER = '' THEN '-9' ELSE GROFFER END, 
+	HDEGOFR1 = CASE WHEN HDEGOFR1 = '' THEN '-9' ELSE HDEGOFR1 END, 
+	DEGGRANT = CASE WHEN DEGGRANT = '' THEN '-9' ELSE DEGGRANT END, 
+	HBCU = CASE WHEN HBCU = '' THEN '-9' ELSE HBCU END, 
+	HOSPITAL = CASE WHEN HOSPITAL = '' THEN '-9' ELSE HOSPITAL END, 
+	MEDICAL = CASE WHEN MEDICAL = '' THEN '-9' ELSE MEDICAL END, 
+	TRIBAL = CASE WHEN TRIBAL = '' THEN '-9' ELSE TRIBAL END, 
+	LOCALE = CASE WHEN LOCALE = '' THEN '-9' ELSE LOCALE END, 
+	OPENPUBL = CASE WHEN OPENPUBL = '' THEN '-9' ELSE OPENPUBL END, 
+	ACT = CASE WHEN ACT = '' THEN 'A' ELSE ACT END, 
+	NEWID = CASE WHEN NEWID = '' THEN '-9' ELSE NEWID END, 
+	DEATHYR = CASE WHEN DEATHYR = '' THEN '-9' ELSE DEATHYR END, 
+	CLOSEDAT = CASE WHEN CLOSEDAT = '' THEN '-9' ELSE CLOSEDAT END, 
+	CYACTIVE = CASE WHEN CYACTIVE = '' THEN '-9' ELSE CYACTIVE END, 
+	POSTSEC = CASE WHEN POSTSEC = '' THEN '-9' ELSE POSTSEC END, 
+	PSEFLAG = CASE WHEN PSEFLAG = '' THEN '-9' ELSE PSEFLAG END, 
+	PSET4FLG = CASE WHEN PSET4FLG = '' THEN '-9' ELSE PSET4FLG END, 
+	RPTMTH = CASE WHEN RPTMTH = '' THEN '-9' ELSE RPTMTH END, 
+	INSTCAT = CASE WHEN INSTCAT = '' THEN '-9' ELSE INSTCAT END, 
+	C21BASIC = CASE WHEN C21BASIC = '' THEN '-9' ELSE C21BASIC END, 
+	C21IPUG = CASE WHEN C21IPUG = '' THEN '-9' ELSE C21IPUG END, 
+	C21IPGRD = CASE WHEN C21IPGRD = '' THEN '-9' ELSE C21IPGRD END, 
+	C21UGPRF = CASE WHEN C21UGPRF = '' THEN '-9' ELSE C21UGPRF END, 
+	C21ENPRF = CASE WHEN C21ENPRF = '' THEN '-9' ELSE C21ENPRF END, 
+	C21SZSET = CASE WHEN C21SZSET = '' THEN '-9' ELSE C21SZSET END, 
+	C18BASIC = CASE WHEN C18BASIC = '' THEN '-9' ELSE C18BASIC END, 
+	C15BASIC = CASE WHEN C15BASIC = '' THEN '-9' ELSE C15BASIC END, 
+	CCBASIC = CASE WHEN CCBASIC = '' THEN '-9' ELSE CCBASIC END, 
+	CARNEGIE = CASE WHEN CARNEGIE = '' THEN '-9' ELSE CARNEGIE END, 
+	LANDGRNT = CASE WHEN LANDGRNT = '' THEN '-9' ELSE LANDGRNT END, 
+	INSTSIZE = CASE WHEN INSTSIZE = '' THEN '-9' ELSE INSTSIZE END, 
+	F1SYSTYP = CASE WHEN F1SYSTYP = '' THEN '-9' ELSE F1SYSTYP END, 
+	F1SYSNAM = CASE WHEN F1SYSNAM = '' THEN '-9' ELSE F1SYSNAM END, 
+	F1SYSCOD = CASE WHEN F1SYSCOD = '' THEN '-9' ELSE F1SYSCOD END, 
+	CBSA = CASE WHEN CBSA = '' THEN '-9' ELSE CBSA END, 
+	CBSATYPE = CASE WHEN CBSATYPE = '' THEN '-9' ELSE CBSATYPE END, 
+	CSA = CASE WHEN CSA = '' THEN '-9' ELSE CSA END, 
+	NECTA = CASE WHEN NECTA = '' THEN '-9' ELSE NECTA END, 
+	COUNTYCD = CASE WHEN COUNTYCD = '' THEN '-9' ELSE COUNTYCD END, 
+	COUNTYNM = CASE WHEN COUNTYNM = '' THEN 'Not Available' ELSE COUNTYNM END, 
+	CNGDSTCD = CASE WHEN CNGDSTCD = '' THEN '-9' ELSE CNGDSTCD END, 
+	LONGITUD = CASE WHEN LONGITUD = '' THEN '-9' ELSE LONGITUD END, 
+	LATITUDE = CASE WHEN LATITUDE = '' THEN '-9' ELSE LATITUDE END, 
+	DFRCGID = CASE WHEN DFRCGID = '' THEN '-9' ELSE DFRCGID END, 
+	DFRCUSCG = CASE WHEN DFRCUSCG = '' THEN '-9' ELSE DFRCUSCG END; 
+
+-- Change column names, types and add comment
+ALTER TABLE institution_temp
+	CHANGE COLUMN UNITID ipeds_id CHAR(6) COMMENT 'Unique identification number of the institution',
+	CHANGE COLUMN INSTNM institution_name TEXT COMMENT 'Institution (entity) name',
+	CHANGE COLUMN IALIAS institution_name_alias TEXT COMMENT 'Institution name alias',
+	CHANGE COLUMN ADDR street_address_or_po_box TEXT COMMENT 'Street address or post office box',
+	CHANGE COLUMN CITY city_location_of_institution TEXT COMMENT 'City location of institution',
+	CHANGE COLUMN STABBR state_abbreviation CHAR(2) COMMENT 'State abbreviation',
+	CHANGE COLUMN ZIP zip_code CHAR(10) COMMENT 'ZIP code',
+	CHANGE COLUMN FIPS fips_state_code INT COMMENT 'FIPS state code',
+	CHANGE COLUMN OBEREG bea_regions INT COMMENT 'Bureau of Economic Analysis (BEA) regions',
+	CHANGE COLUMN CHFNM chief_administrator_name TEXT COMMENT 'Name of chief administrator',
+	CHANGE COLUMN CHFTITLE chief_administrator_title TEXT COMMENT 'Title of chief administrator',
+	CHANGE COLUMN GENTELE general_info_telephone_number TEXT COMMENT 'General information telephone number',
+	CHANGE COLUMN EIN employer_identification_number TEXT COMMENT 'Employer Identification Number',
+	CHANGE COLUMN DUNS dun_and_bradstreet_numbers TEXT COMMENT 'Dun and Bradstreet numbers',
+	CHANGE COLUMN OPEID ope_id_number TEXT COMMENT 'Office of Postsecondary Education (OPE) ID Number',
+	CHANGE COLUMN OPEFLAG ope_title_iv_eligibility_indicator INT COMMENT 'OPE Title IV eligibility indicator code',
+	CHANGE COLUMN WEBADDR institution_website_address TEXT COMMENT 'Institution web address',
+	CHANGE COLUMN ADMINURL admissions_office_web_address TEXT COMMENT 'Admissions office web address',
+	CHANGE COLUMN FAIDURL financial_aid_office_web_address TEXT COMMENT 'Financial aid office web address',
+	CHANGE COLUMN APPLURL online_application_web_address TEXT COMMENT 'Online application web address',
+	CHANGE COLUMN NPRICURL net_price_calculator_web_address TEXT COMMENT 'Net price calculator web address',
+	CHANGE COLUMN VETURL veterans_military_tuition_policies_web_address TEXT COMMENT 'Veterans and Military Servicemembers tuition policies web address',
+	CHANGE COLUMN ATHURL student_right_to_know_athlete_graduation_rate_web_address TEXT COMMENT 'Student-Right-to-Know student athlete graduation rate web address',
+	CHANGE COLUMN DISAURL disability_services_web_address TEXT COMMENT 'Disability Services Web Address',
+	CHANGE COLUMN SECTOR sector_of_institution INT COMMENT 'Sector of institution',
+	CHANGE COLUMN ICLEVEL level_of_institution INT COMMENT 'Level of institution',
+	CHANGE COLUMN CONTROL control_of_institution INT COMMENT 'Control of institution',
+	CHANGE COLUMN HLOFFER highest_level_of_offering INT COMMENT 'Highest level of offering',
+	CHANGE COLUMN UGOFFER undergraduate_offering INT COMMENT 'Undergraduate offering',
+	CHANGE COLUMN GROFFER graduate_offering INT COMMENT 'Graduate offering',
+	CHANGE COLUMN HDEGOFR1 highest_degree_offered INT COMMENT 'Highest degree offered',
+	CHANGE COLUMN DEGGRANT degree_granting_status INT COMMENT 'Degree-granting status',
+	CHANGE COLUMN HBCU historically_black_college_or_university INT COMMENT 'Historically Black College or University',
+	CHANGE COLUMN HOSPITAL institution_has_hospital INT COMMENT 'Institution has hospital',
+	CHANGE COLUMN MEDICAL institution_grants_medical_degree INT COMMENT 'Institution grants a medical degree',
+	CHANGE COLUMN TRIBAL tribal_college INT COMMENT 'Tribal college',
+	CHANGE COLUMN LOCALE degree_of_urbanization INT COMMENT 'Degree of urbanization (Urban-centric locale)',
+	CHANGE COLUMN OPENPUBL institution_open_to_public INT COMMENT 'Institution open to the general public',
+	CHANGE COLUMN ACT status_of_institution TEXT COMMENT 'Status of institution',
+	CHANGE COLUMN NEWID unitid_for_merged_schools INT COMMENT 'UNITID for merged schools',
+	CHANGE COLUMN DEATHYR year_institution_deleted_from_ipeds INT COMMENT 'Year institution was deleted from IPEDS',
+	CHANGE COLUMN CLOSEDAT date_institution_closed TEXT COMMENT 'Date institution closed',
+	CHANGE COLUMN CYACTIVE institution_active_in_current_year INT COMMENT 'Institution is active in current year',
+	CHANGE COLUMN POSTSEC primarily_postsecondary_indicator INT COMMENT 'Primarily postsecondary indicator',
+	CHANGE COLUMN PSEFLAG postsecondary_institution_indicator INT COMMENT 'Postsecondary institution indicator',
+	CHANGE COLUMN PSET4FLG postsecondary_title_iv_institution_indicator INT COMMENT 'Postsecondary and Title IV institution indicator',
+	CHANGE COLUMN RPTMTH reporting_method_for_student_charges_and_graduation_rates INT COMMENT 'Reporting method for student charges, graduation rates, retention rates and student financial aid',
+	CHANGE COLUMN INSTCAT institutional_category INT COMMENT 'Institutional category',
+	CHANGE COLUMN C21BASIC carnegie_classification_2021_basic INT COMMENT 'Carnegie Classification 2021: Basic',
+	CHANGE COLUMN C21IPUG carnegie_classification_2021_undergraduate_instructional_program INT COMMENT 'Carnegie Classification 2021: Undergraduate Instructional Program',
+	CHANGE COLUMN C21IPGRD carnegie_classification_2021_graduate_instructional_program INT COMMENT 'Carnegie Classification 2021: Graduate Instructional Program',
+	CHANGE COLUMN C21UGPRF carnegie_classification_2021_undergraduate_profile INT COMMENT 'Carnegie Classification 2021: Undergraduate Profile',
+	CHANGE COLUMN C21ENPRF carnegie_classification_2021_enrollment_profile INT COMMENT 'Carnegie Classification 2021: Enrollment Profile',
+	CHANGE COLUMN C21SZSET carnegie_classification_2021_size_and_setting INT COMMENT 'Carnegie Classification 2021: Size and Setting',
+	CHANGE COLUMN C18BASIC carnegie_classification_2018_basic INT COMMENT 'Carnegie Classification 2018: Basic',
+	CHANGE COLUMN C15BASIC carnegie_classification_2015_basic INT COMMENT 'Carnegie Classification 2015: Basic',
+	CHANGE COLUMN CCBASIC carnegie_classification_2005_2010_basic INT COMMENT 'Carnegie Classification 2005/2010: Basic',
+	CHANGE COLUMN CARNEGIE carnegie_classification_2000 INT COMMENT 'Carnegie Classification 2000',
+	CHANGE COLUMN LANDGRNT land_grant_institution INT COMMENT 'Land Grant Institution',
+	CHANGE COLUMN INSTSIZE institution_size_category INT COMMENT 'Institution size category',
+	CHANGE COLUMN F1SYSTYP multi_institution_or_multi_campus_organization INT COMMENT 'Multi-institution or multi-campus organization',
+	CHANGE COLUMN F1SYSNAM name_of_multi_institution_or_multi_campus_organization TEXT COMMENT 'Name of multi-institution or multi-campus organization',
+	CHANGE COLUMN F1SYSCOD id_number_of_multi_institution_or_multi_campus_organization TEXT COMMENT 'Identification number of multi-institution or multi-campus organization',
+	CHANGE COLUMN CBSA core_based_statistical_area TEXT COMMENT 'Core Based Statistical Area (CBSA)',
+	CHANGE COLUMN CBSATYPE cbsa_type_metropolitan_or_micropolitan INT COMMENT 'CBSA Type Metropolitan or Micropolitan',
+	CHANGE COLUMN CSA combined_statistical_area INT COMMENT 'Combined Statistical Area (CSA)',
+	CHANGE COLUMN NECTA new_england_city_and_town_area INT COMMENT 'New England City and Town Area (NECTA)',
+	CHANGE COLUMN COUNTYCD fips_county_code INT COMMENT 'Fips County code',
+	CHANGE COLUMN COUNTYNM county_name TEXT COMMENT 'County name',
+	CHANGE COLUMN CNGDSTCD state_and_114th_congressional_district_id TEXT COMMENT 'State and 114TH Congressional District ID',
+	CHANGE COLUMN LONGITUD longitude_location_of_institution FLOAT COMMENT 'Longitude location of institution',
+	CHANGE COLUMN LATITUDE latitude_location_of_institution FLOAT COMMENT 'Latitude location of institution',
+	CHANGE COLUMN DFRCGID data_feedback_report_comparison_group_created_by_nces TEXT COMMENT 'Data Feedback Report comparison group created by NCES',
+	CHANGE COLUMN DFRCUSCG data_feedback_report_institution_submitted TEXT COMMENT 'Data Feedback Report - Institution submitted a custom comparison group';
+
+-- Delete rows that have not been encoded and don't have a link back to the 118th congress
+DELETE FROM institution_temp 
+	WHERE ipeds_id NOT IN (
+		SELECT ipeds_id FROM institution_to_congress
+		);
+
+/*
+	Create institution_imputation_description table and populate the code/description
+*/
 -- Create institution_imputation_description table
+DROP TABLE IF EXISTS institution_imputation_description;
 CREATE TABLE institution_imputation_description (
     code CHAR(1),
-    description VARCHAR(100)
-);
+    description VARCHAR(100),
+	PRIMARY KEY (code));
 
 -- Insert values into the institution_imputation_description table for reporting purposes
 INSERT INTO institution_imputation_description (code, description)
@@ -79,6 +258,9 @@ INSERT INTO institution_imputation_description (code, description)
     ('R', 'Reported'),
     ('Z', 'Implied zero');
 
+/*
+	Create the institution_admission table and populate with calendar year 2021 data 
+*/
 -- Copy adm2021 table from mytemp and create the institution_admissions in mydatabase
 DROP TABLE IF EXISTS institution_admissions;
 CREATE TABLE institution_admissions AS
@@ -86,44 +268,44 @@ CREATE TABLE institution_admissions AS
 
 -- Update the institution_admissions table to replace empty strings with -1
 UPDATE institution_admissions SET
-    ADMCON1 = CASE WHEN ADMCON1 = '' THEN '-1' ELSE ADMCON1 END, 
-    ADMCON2 = CASE WHEN ADMCON2 = '' THEN '-1' ELSE ADMCON2 END, 
-    ADMCON3 = CASE WHEN ADMCON3 = '' THEN '-1' ELSE ADMCON3 END, 
-    ADMCON4 = CASE WHEN ADMCON4 = '' THEN '-1' ELSE ADMCON4 END, 
-    ADMCON5 = CASE WHEN ADMCON5 = '' THEN '-1' ELSE ADMCON5 END, 
-    ADMCON6 = CASE WHEN ADMCON6 = '' THEN '-1' ELSE ADMCON6 END, 
-    ADMCON7 = CASE WHEN ADMCON7 = '' THEN '-1' ELSE ADMCON7 END, 
-    ADMCON8 = CASE WHEN ADMCON8 = '' THEN '-1' ELSE ADMCON8 END, 
-    ADMCON9 = CASE WHEN ADMCON9 = '' THEN '-1' ELSE ADMCON9 END, 
-    APPLCN = CASE WHEN APPLCN = '' THEN '-1' ELSE APPLCN END, 
-    APPLCNM = CASE WHEN APPLCNM = '' THEN '-1' ELSE APPLCNM END, 
-    APPLCNW = CASE WHEN APPLCNW = '' THEN '-1' ELSE APPLCNW END, 
-    ADMSSN = CASE WHEN ADMSSN = '' THEN '-1' ELSE ADMSSN END, 
-    ADMSSNM = CASE WHEN ADMSSNM = '' THEN '-1' ELSE ADMSSNM END, 
-    ADMSSNW = CASE WHEN ADMSSNW = '' THEN '-1' ELSE ADMSSNW END, 
-    ENRLT = CASE WHEN ENRLT = '' THEN '-1' ELSE ENRLT END, 
-    ENRLM = CASE WHEN ENRLM = '' THEN '-1' ELSE ENRLM END, 
-    ENRLW = CASE WHEN ENRLW = '' THEN '-1' ELSE ENRLW END, 
-    ENRLFT = CASE WHEN ENRLFT = '' THEN '-1' ELSE ENRLFT END, 
-    ENRLFTM = CASE WHEN ENRLFTM = '' THEN '-1' ELSE ENRLFTM END, 
-    ENRLFTW = CASE WHEN ENRLFTW = '' THEN '-1' ELSE ENRLFTW END, 
-    ENRLPT = CASE WHEN ENRLPT = '' THEN '-1' ELSE ENRLPT END, 
-    ENRLPTM = CASE WHEN ENRLPTM = '' THEN '-1' ELSE ENRLPTM END, 
-    ENRLPTW = CASE WHEN ENRLPTW = '' THEN '-1' ELSE ENRLPTW END, 
-    SATNUM = CASE WHEN SATNUM = '' THEN '-1' ELSE SATNUM END, 
-    SATPCT = CASE WHEN SATPCT = '' THEN '-1' ELSE SATPCT END, 
-    ACTNUM = CASE WHEN ACTNUM = '' THEN '-1' ELSE ACTNUM END, 
-    ACTPCT = CASE WHEN ACTPCT = '' THEN '-1' ELSE ACTPCT END, 
-    SATVR25 = CASE WHEN SATVR25 = '' THEN '-1' ELSE SATVR25 END, 
-    SATVR75 = CASE WHEN SATVR75 = '' THEN '-1' ELSE SATVR75 END, 
-    SATMT25 = CASE WHEN SATMT25 = '' THEN '-1' ELSE SATMT25 END, 
-    SATMT75 = CASE WHEN SATMT75 = '' THEN '-1' ELSE SATMT75 END, 
-    ACTCM25 = CASE WHEN ACTCM25 = '' THEN '-1' ELSE ACTCM25 END, 
-    ACTCM75 = CASE WHEN ACTCM75 = '' THEN '-1' ELSE ACTCM75 END, 
-    ACTEN25 = CASE WHEN ACTEN25 = '' THEN '-1' ELSE ACTEN25 END, 
-    ACTEN75 = CASE WHEN ACTEN75 = '' THEN '-1' ELSE ACTEN75 END, 
-    ACTMT25 = CASE WHEN ACTMT25 = '' THEN '-1' ELSE ACTMT25 END, 
-    ACTMT75 = CASE WHEN ACTMT75 = '' THEN '-1' ELSE ACTMT75 END;
+    ADMCON1 = CASE WHEN ADMCON1 = '' THEN '-9' ELSE ADMCON1 END, 
+    ADMCON2 = CASE WHEN ADMCON2 = '' THEN '-9' ELSE ADMCON2 END, 
+    ADMCON3 = CASE WHEN ADMCON3 = '' THEN '-9' ELSE ADMCON3 END, 
+    ADMCON4 = CASE WHEN ADMCON4 = '' THEN '-9' ELSE ADMCON4 END, 
+    ADMCON5 = CASE WHEN ADMCON5 = '' THEN '-9' ELSE ADMCON5 END, 
+    ADMCON6 = CASE WHEN ADMCON6 = '' THEN '-9' ELSE ADMCON6 END, 
+    ADMCON7 = CASE WHEN ADMCON7 = '' THEN '-9' ELSE ADMCON7 END, 
+    ADMCON8 = CASE WHEN ADMCON8 = '' THEN '-9' ELSE ADMCON8 END, 
+    ADMCON9 = CASE WHEN ADMCON9 = '' THEN '-9' ELSE ADMCON9 END, 
+    APPLCN = CASE WHEN APPLCN = '' THEN '-9' ELSE APPLCN END, 
+    APPLCNM = CASE WHEN APPLCNM = '' THEN '-9' ELSE APPLCNM END, 
+    APPLCNW = CASE WHEN APPLCNW = '' THEN '-9' ELSE APPLCNW END, 
+    ADMSSN = CASE WHEN ADMSSN = '' THEN '-9' ELSE ADMSSN END, 
+    ADMSSNM = CASE WHEN ADMSSNM = '' THEN '-9' ELSE ADMSSNM END, 
+    ADMSSNW = CASE WHEN ADMSSNW = '' THEN '-9' ELSE ADMSSNW END, 
+    ENRLT = CASE WHEN ENRLT = '' THEN '-9' ELSE ENRLT END, 
+    ENRLM = CASE WHEN ENRLM = '' THEN '-9' ELSE ENRLM END, 
+    ENRLW = CASE WHEN ENRLW = '' THEN '-9' ELSE ENRLW END, 
+    ENRLFT = CASE WHEN ENRLFT = '' THEN '-9' ELSE ENRLFT END, 
+    ENRLFTM = CASE WHEN ENRLFTM = '' THEN '-9' ELSE ENRLFTM END, 
+    ENRLFTW = CASE WHEN ENRLFTW = '' THEN '-9' ELSE ENRLFTW END, 
+    ENRLPT = CASE WHEN ENRLPT = '' THEN '-9' ELSE ENRLPT END, 
+    ENRLPTM = CASE WHEN ENRLPTM = '' THEN '-9' ELSE ENRLPTM END, 
+    ENRLPTW = CASE WHEN ENRLPTW = '' THEN '-9' ELSE ENRLPTW END, 
+    SATNUM = CASE WHEN SATNUM = '' THEN '-9' ELSE SATNUM END, 
+    SATPCT = CASE WHEN SATPCT = '' THEN '-9' ELSE SATPCT END, 
+    ACTNUM = CASE WHEN ACTNUM = '' THEN '-9' ELSE ACTNUM END, 
+    ACTPCT = CASE WHEN ACTPCT = '' THEN '-9' ELSE ACTPCT END, 
+    SATVR25 = CASE WHEN SATVR25 = '' THEN '-9' ELSE SATVR25 END, 
+    SATVR75 = CASE WHEN SATVR75 = '' THEN '-9' ELSE SATVR75 END, 
+    SATMT25 = CASE WHEN SATMT25 = '' THEN '-9' ELSE SATMT25 END, 
+    SATMT75 = CASE WHEN SATMT75 = '' THEN '-9' ELSE SATMT75 END, 
+    ACTCM25 = CASE WHEN ACTCM25 = '' THEN '-9' ELSE ACTCM25 END, 
+    ACTCM75 = CASE WHEN ACTCM75 = '' THEN '-9' ELSE ACTCM75 END, 
+    ACTEN25 = CASE WHEN ACTEN25 = '' THEN '-9' ELSE ACTEN25 END, 
+    ACTEN75 = CASE WHEN ACTEN75 = '' THEN '-9' ELSE ACTEN75 END, 
+    ACTMT25 = CASE WHEN ACTMT25 = '' THEN '-9' ELSE ACTMT25 END, 
+    ACTMT75 = CASE WHEN ACTMT75 = '' THEN '-9' ELSE ACTMT75 END;
 
 -- Alter the institution_admissions table to change the column names, data types, and comments
 ALTER TABLE institution_admissions
@@ -197,10 +379,11 @@ ALTER TABLE institution_admissions
     CHANGE COLUMN ACTMT75 act_math_75th_pctl INT COMMENT 'ACT Math 75th percentile score', 
     CHANGE COLUMN XACTMT75 act_math_75th_pctl_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'ACT Math 75th percentile score (Imputed Code)';
 
--- Create FK contraint between institution_admissions and institution based on 'ipeds_id' PK in institution
-ALTER TABLE institution_admissions
-    ADD CONSTRAINT fk_institution_admissions_institution
-    FOREIGN KEY (ipeds_id) REFERENCES institution(ipeds_id);
+-- Delete rows that have not been encoded
+DELETE FROM institution_admissions 
+	WHERE ipeds_id NOT IN (
+		SELECT ipeds_id FROM institution_to_congress
+		);
 
 -- Drop the institution_salaries table if it exists
 DROP TABLE IF EXISTS institution_salaries;
@@ -210,61 +393,61 @@ CREATE TABLE institution_salaries
 
 -- Update the institution_salaries table filling in missing values with -1
 UPDATE institution_salaries SET
-	ARANK = CASE WHEN ARANK = '' THEN '-1' ELSE ARANK END, 
-	SAINSTT = CASE WHEN SAINSTT = '' THEN '-1' ELSE SAINSTT END, 
-	SAINSTM = CASE WHEN SAINSTM = '' THEN '-1' ELSE SAINSTM END, 
-	SAINSTW = CASE WHEN SAINSTW = '' THEN '-1' ELSE SAINSTW END, 
-	SA_9MCT = CASE WHEN SA_9MCT = '' THEN '-1' ELSE SA_9MCT END, 
-	SA_9MCM = CASE WHEN SA_9MCM = '' THEN '-1' ELSE SA_9MCM END, 
-	SA_9MCW = CASE WHEN SA_9MCW = '' THEN '-1' ELSE SA_9MCW END, 
-	SATOTLT = CASE WHEN SATOTLT = '' THEN '-1' ELSE SATOTLT END, 
-	SATOTLM = CASE WHEN SATOTLM = '' THEN '-1' ELSE SATOTLM END, 
-	SATOTLW = CASE WHEN SATOTLW = '' THEN '-1' ELSE SATOTLW END, 
-	SA09MCT = CASE WHEN SA09MCT = '' THEN '-1' ELSE SA09MCT END, 
-	SA09MCM = CASE WHEN SA09MCM = '' THEN '-1' ELSE SA09MCM END, 
-	SA09MCW = CASE WHEN SA09MCW = '' THEN '-1' ELSE SA09MCW END, 
-	SA10MCT = CASE WHEN SA10MCT = '' THEN '-1' ELSE SA10MCT END, 
-	SA10MCM = CASE WHEN SA10MCM = '' THEN '-1' ELSE SA10MCM END, 
-	SA10MCW = CASE WHEN SA10MCW = '' THEN '-1' ELSE SA10MCW END, 
-	SA11MCT = CASE WHEN SA11MCT = '' THEN '-1' ELSE SA11MCT END, 
-	SA11MCM = CASE WHEN SA11MCM = '' THEN '-1' ELSE SA11MCM END, 
-	SA11MCW = CASE WHEN SA11MCW = '' THEN '-1' ELSE SA11MCW END, 
-	SA12MCT = CASE WHEN SA12MCT = '' THEN '-1' ELSE SA12MCT END, 
-	SA12MCM = CASE WHEN SA12MCM = '' THEN '-1' ELSE SA12MCM END, 
-	SA12MCW = CASE WHEN SA12MCW = '' THEN '-1' ELSE SA12MCW END, 
-	SAOUTLT = CASE WHEN SAOUTLT = '' THEN '-1' ELSE SAOUTLT END, 
-	SAOUTLM = CASE WHEN SAOUTLM = '' THEN '-1' ELSE SAOUTLM END, 
-	SAOUTLW = CASE WHEN SAOUTLW = '' THEN '-1' ELSE SAOUTLW END, 
-	SA09MOT = CASE WHEN SA09MOT = '' THEN '-1' ELSE SA09MOT END, 
-	SA09MOM = CASE WHEN SA09MOM = '' THEN '-1' ELSE SA09MOM END, 
-	SA09MOW = CASE WHEN SA09MOW = '' THEN '-1' ELSE SA09MOW END, 
-	SA10MOT = CASE WHEN SA10MOT = '' THEN '-1' ELSE SA10MOT END, 
-	SA10MOM = CASE WHEN SA10MOM = '' THEN '-1' ELSE SA10MOM END, 
-	SA10MOW = CASE WHEN SA10MOW = '' THEN '-1' ELSE SA10MOW END, 
-	SA11MOT = CASE WHEN SA11MOT = '' THEN '-1' ELSE SA11MOT END, 
-	SA11MOM = CASE WHEN SA11MOM = '' THEN '-1' ELSE SA11MOM END, 
-	SA11MOW = CASE WHEN SA11MOW = '' THEN '-1' ELSE SA11MOW END, 
-	SA12MOT = CASE WHEN SA12MOT = '' THEN '-1' ELSE SA12MOT END, 
-	SA12MOM = CASE WHEN SA12MOM = '' THEN '-1' ELSE SA12MOM END, 
-	SA12MOW = CASE WHEN SA12MOW = '' THEN '-1' ELSE SA12MOW END, 
-	SAEQ9OT = CASE WHEN SAEQ9OT = '' THEN '-1' ELSE SAEQ9OT END, 
-	SAEQ9OM = CASE WHEN SAEQ9OM = '' THEN '-1' ELSE SAEQ9OM END, 
-	SAEQ9OW = CASE WHEN SAEQ9OW = '' THEN '-1' ELSE SAEQ9OW END, 
-	SAEQ9AT = CASE WHEN SAEQ9AT = '' THEN '-1' ELSE SAEQ9AT END, 
-	SAEQ9AM = CASE WHEN SAEQ9AM = '' THEN '-1' ELSE SAEQ9AM END, 
-	SAEQ9AW = CASE WHEN SAEQ9AW = '' THEN '-1' ELSE SAEQ9AW END, 
-	SA09MAT = CASE WHEN SA09MAT = '' THEN '-1' ELSE SA09MAT END, 
-	SA09MAM = CASE WHEN SA09MAM = '' THEN '-1' ELSE SA09MAM END, 
-	SA09MAW = CASE WHEN SA09MAW = '' THEN '-1' ELSE SA09MAW END, 
-	SA10MAT = CASE WHEN SA10MAT = '' THEN '-1' ELSE SA10MAT END, 
-	SA10MAM = CASE WHEN SA10MAM = '' THEN '-1' ELSE SA10MAM END, 
-	SA10MAW = CASE WHEN SA10MAW = '' THEN '-1' ELSE SA10MAW END, 
-	SA11MAT = CASE WHEN SA11MAT = '' THEN '-1' ELSE SA11MAT END, 
-	SA11MAM = CASE WHEN SA11MAM = '' THEN '-1' ELSE SA11MAM END, 
-	SA11MAW = CASE WHEN SA11MAW = '' THEN '-1' ELSE SA11MAW END, 
-	SA12MAT = CASE WHEN SA12MAT = '' THEN '-1' ELSE SA12MAT END, 
-	SA12MAM = CASE WHEN SA12MAM = '' THEN '-1' ELSE SA12MAM END, 
-	SA12MAW = CASE WHEN SA12MAW = '' THEN '-1' ELSE SA12MAW END; 
+	ARANK = CASE WHEN ARANK = '' THEN '-9' ELSE ARANK END, 
+	SAINSTT = CASE WHEN SAINSTT = '' THEN '-9' ELSE SAINSTT END, 
+	SAINSTM = CASE WHEN SAINSTM = '' THEN '-9' ELSE SAINSTM END, 
+	SAINSTW = CASE WHEN SAINSTW = '' THEN '-9' ELSE SAINSTW END, 
+	SA_9MCT = CASE WHEN SA_9MCT = '' THEN '-9' ELSE SA_9MCT END, 
+	SA_9MCM = CASE WHEN SA_9MCM = '' THEN '-9' ELSE SA_9MCM END, 
+	SA_9MCW = CASE WHEN SA_9MCW = '' THEN '-9' ELSE SA_9MCW END, 
+	SATOTLT = CASE WHEN SATOTLT = '' THEN '-9' ELSE SATOTLT END, 
+	SATOTLM = CASE WHEN SATOTLM = '' THEN '-9' ELSE SATOTLM END, 
+	SATOTLW = CASE WHEN SATOTLW = '' THEN '-9' ELSE SATOTLW END, 
+	SA09MCT = CASE WHEN SA09MCT = '' THEN '-9' ELSE SA09MCT END, 
+	SA09MCM = CASE WHEN SA09MCM = '' THEN '-9' ELSE SA09MCM END, 
+	SA09MCW = CASE WHEN SA09MCW = '' THEN '-9' ELSE SA09MCW END, 
+	SA10MCT = CASE WHEN SA10MCT = '' THEN '-9' ELSE SA10MCT END, 
+	SA10MCM = CASE WHEN SA10MCM = '' THEN '-9' ELSE SA10MCM END, 
+	SA10MCW = CASE WHEN SA10MCW = '' THEN '-9' ELSE SA10MCW END, 
+	SA11MCT = CASE WHEN SA11MCT = '' THEN '-9' ELSE SA11MCT END, 
+	SA11MCM = CASE WHEN SA11MCM = '' THEN '-9' ELSE SA11MCM END, 
+	SA11MCW = CASE WHEN SA11MCW = '' THEN '-9' ELSE SA11MCW END, 
+	SA12MCT = CASE WHEN SA12MCT = '' THEN '-9' ELSE SA12MCT END, 
+	SA12MCM = CASE WHEN SA12MCM = '' THEN '-9' ELSE SA12MCM END, 
+	SA12MCW = CASE WHEN SA12MCW = '' THEN '-9' ELSE SA12MCW END, 
+	SAOUTLT = CASE WHEN SAOUTLT = '' THEN '-9' ELSE SAOUTLT END, 
+	SAOUTLM = CASE WHEN SAOUTLM = '' THEN '-9' ELSE SAOUTLM END, 
+	SAOUTLW = CASE WHEN SAOUTLW = '' THEN '-9' ELSE SAOUTLW END, 
+	SA09MOT = CASE WHEN SA09MOT = '' THEN '-9' ELSE SA09MOT END, 
+	SA09MOM = CASE WHEN SA09MOM = '' THEN '-9' ELSE SA09MOM END, 
+	SA09MOW = CASE WHEN SA09MOW = '' THEN '-9' ELSE SA09MOW END, 
+	SA10MOT = CASE WHEN SA10MOT = '' THEN '-9' ELSE SA10MOT END, 
+	SA10MOM = CASE WHEN SA10MOM = '' THEN '-9' ELSE SA10MOM END, 
+	SA10MOW = CASE WHEN SA10MOW = '' THEN '-9' ELSE SA10MOW END, 
+	SA11MOT = CASE WHEN SA11MOT = '' THEN '-9' ELSE SA11MOT END, 
+	SA11MOM = CASE WHEN SA11MOM = '' THEN '-9' ELSE SA11MOM END, 
+	SA11MOW = CASE WHEN SA11MOW = '' THEN '-9' ELSE SA11MOW END, 
+	SA12MOT = CASE WHEN SA12MOT = '' THEN '-9' ELSE SA12MOT END, 
+	SA12MOM = CASE WHEN SA12MOM = '' THEN '-9' ELSE SA12MOM END, 
+	SA12MOW = CASE WHEN SA12MOW = '' THEN '-9' ELSE SA12MOW END, 
+	SAEQ9OT = CASE WHEN SAEQ9OT = '' THEN '-9' ELSE SAEQ9OT END, 
+	SAEQ9OM = CASE WHEN SAEQ9OM = '' THEN '-9' ELSE SAEQ9OM END, 
+	SAEQ9OW = CASE WHEN SAEQ9OW = '' THEN '-9' ELSE SAEQ9OW END, 
+	SAEQ9AT = CASE WHEN SAEQ9AT = '' THEN '-9' ELSE SAEQ9AT END, 
+	SAEQ9AM = CASE WHEN SAEQ9AM = '' THEN '-9' ELSE SAEQ9AM END, 
+	SAEQ9AW = CASE WHEN SAEQ9AW = '' THEN '-9' ELSE SAEQ9AW END, 
+	SA09MAT = CASE WHEN SA09MAT = '' THEN '-9' ELSE SA09MAT END, 
+	SA09MAM = CASE WHEN SA09MAM = '' THEN '-9' ELSE SA09MAM END, 
+	SA09MAW = CASE WHEN SA09MAW = '' THEN '-9' ELSE SA09MAW END, 
+	SA10MAT = CASE WHEN SA10MAT = '' THEN '-9' ELSE SA10MAT END, 
+	SA10MAM = CASE WHEN SA10MAM = '' THEN '-9' ELSE SA10MAM END, 
+	SA10MAW = CASE WHEN SA10MAW = '' THEN '-9' ELSE SA10MAW END, 
+	SA11MAT = CASE WHEN SA11MAT = '' THEN '-9' ELSE SA11MAT END, 
+	SA11MAM = CASE WHEN SA11MAM = '' THEN '-9' ELSE SA11MAM END, 
+	SA11MAW = CASE WHEN SA11MAW = '' THEN '-9' ELSE SA11MAW END, 
+	SA12MAT = CASE WHEN SA12MAT = '' THEN '-9' ELSE SA12MAT END, 
+	SA12MAM = CASE WHEN SA12MAM = '' THEN '-9' ELSE SA12MAM END, 
+	SA12MAW = CASE WHEN SA12MAW = '' THEN '-9' ELSE SA12MAW END; 
 
 -- Alter institution_salaries table renaming columns, changing data types, and adding comments
 ALTER TABLE institution_salaries
@@ -380,7 +563,191 @@ ALTER TABLE institution_salaries
 	CHANGE COLUMN SA12MAW avg_salary_contract_12_month_women INT COMMENT 'Average salary for instructional staff on 12-month contract-women', 
 	CHANGE COLUMN XSA12MAW avg_salary_contract_12_month_women_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Average salary for instructional staff on 12-month contract-women (Imputed Code)';
 
--- Create FK contraint between institution_salaries and institution based on 'ipeds_id' PK in institution
-ALTER TABLE institution_salaries
-    ADD CONSTRAINT fk_institution_salaries_institution
+-- Delete rows that have not been encoded
+DELETE FROM institution_salaries 
+	WHERE ipeds_id NOT IN (
+		SELECT ipeds_id FROM institution_to_congress
+		);
+
+-- Copy s2021_oc table from mytemp and create the institution_diversity in mydatabase
+DROP TABLE IF EXISTS institution_diversity;
+CREATE TABLE institution_diversity AS
+    SELECT *, '2021' as 'calendar_year' FROM mytemp.s2021_oc;
+
+UPDATE institution_diversity SET
+	STAFFCAT = CASE WHEN STAFFCAT = '' THEN 'NA' ELSE STAFFCAT END, 
+	FTPT = CASE WHEN FTPT = '' THEN '-9' ELSE FTPT END, 
+	OCCUPCAT = CASE WHEN OCCUPCAT = '' THEN '-9' ELSE OCCUPCAT END, 
+	SABDTYPE = CASE WHEN SABDTYPE = '' THEN '-9' ELSE SABDTYPE END, 
+	HRTOTLT = CASE WHEN HRTOTLT = '' THEN '-9' ELSE HRTOTLT END, 
+	HRTOTLM = CASE WHEN HRTOTLM = '' THEN '-9' ELSE HRTOTLM END, 
+	HRTOTLW = CASE WHEN HRTOTLW = '' THEN '-9' ELSE HRTOTLW END, 
+	HRAIANT = CASE WHEN HRAIANT = '' THEN '-9' ELSE HRAIANT END, 
+	HRAIANM = CASE WHEN HRAIANM = '' THEN '-9' ELSE HRAIANM END, 
+	HRAIANW = CASE WHEN HRAIANW = '' THEN '-9' ELSE HRAIANW END, 
+	HRASIAT = CASE WHEN HRASIAT = '' THEN '-9' ELSE HRASIAT END, 
+	HRASIAM = CASE WHEN HRASIAM = '' THEN '-9' ELSE HRASIAM END, 
+	HRASIAW = CASE WHEN HRASIAW = '' THEN '-9' ELSE HRASIAW END, 
+	HRBKAAT = CASE WHEN HRBKAAT = '' THEN '-9' ELSE HRBKAAT END, 
+	HRBKAAM = CASE WHEN HRBKAAM = '' THEN '-9' ELSE HRBKAAM END, 
+	HRBKAAW = CASE WHEN HRBKAAW = '' THEN '-9' ELSE HRBKAAW END, 
+	HRHISPT = CASE WHEN HRHISPT = '' THEN '-9' ELSE HRHISPT END, 
+	HRHISPM = CASE WHEN HRHISPM = '' THEN '-9' ELSE HRHISPM END, 
+	HRHISPW = CASE WHEN HRHISPW = '' THEN '-9' ELSE HRHISPW END, 
+	HRNHPIT = CASE WHEN HRNHPIT = '' THEN '-9' ELSE HRNHPIT END, 
+	HRNHPIM = CASE WHEN HRNHPIM = '' THEN '-9' ELSE HRNHPIM END, 
+	HRNHPIW = CASE WHEN HRNHPIW = '' THEN '-9' ELSE HRNHPIW END, 
+	HRWHITT = CASE WHEN HRWHITT = '' THEN '-9' ELSE HRWHITT END, 
+	HRWHITM = CASE WHEN HRWHITM = '' THEN '-9' ELSE HRWHITM END, 
+	HRWHITW = CASE WHEN HRWHITW = '' THEN '-9' ELSE HRWHITW END, 
+	HR2MORT = CASE WHEN HR2MORT = '' THEN '-9' ELSE HR2MORT END, 
+	HR2MORM = CASE WHEN HR2MORM = '' THEN '-9' ELSE HR2MORM END, 
+	HR2MORW = CASE WHEN HR2MORW = '' THEN '-9' ELSE HR2MORW END, 
+	HRUNKNT = CASE WHEN HRUNKNT = '' THEN '-9' ELSE HRUNKNT END, 
+	HRUNKNM = CASE WHEN HRUNKNM = '' THEN '-9' ELSE HRUNKNM END, 
+	HRUNKNW = CASE WHEN HRUNKNW = '' THEN '-9' ELSE HRUNKNW END, 
+	HRNRALT = CASE WHEN HRNRALT = '' THEN '-9' ELSE HRNRALT END, 
+	HRNRALM = CASE WHEN HRNRALM = '' THEN '-9' ELSE HRNRALM END, 
+	HRNRALW = CASE WHEN HRNRALW = '' THEN '-9' ELSE HRNRALW END;
+
+ALTER TABLE institution_diversity
+	CHANGE COLUMN calendar_year calendar_year CHAR(4) COMMENT 'Calendar year of the data',
+	CHANGE COLUMN UNITID ipeds_id CHAR(6) COMMENT 'Unique identification number of the institution',
+	CHANGE COLUMN STAFFCAT occupation_and_full_part_time_status TEXT COMMENT 'Occupation and full- and part-time status',
+	CHANGE COLUMN FTPT full_time_or_part_time_status INT COMMENT 'Full-time or part-time status',
+	CHANGE COLUMN OCCUPCAT occupation_category TEXT COMMENT 'Occupation category',
+	CHANGE COLUMN SABDTYPE identifies_occupations_consistent_with_previous_codes INT COMMENT 'Identifies occupations consistent with previous codes',
+	CHANGE COLUMN HRTOTLT grand_total INT COMMENT 'Grand total', 
+	CHANGE COLUMN XHRTOTLT grand_total_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Grand total(Imputed Code)',
+	CHANGE COLUMN HRTOTLM grand_total_men INT COMMENT 'Grand total men', 
+	CHANGE COLUMN XHRTOTLM grand_total_men_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Grand total men(Imputed Code)',
+	CHANGE COLUMN HRTOTLW grand_total_women INT COMMENT 'Grand total women', 
+	CHANGE COLUMN XHRTOTLW grand_total_women_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Grand total women(Imputed Code)',
+	CHANGE COLUMN HRAIANT american_indian_or_alaska_native_total INT COMMENT 'American Indian or Alaska Native total', 
+	CHANGE COLUMN XHRAIANT american_indian_or_alaska_native_total_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'American Indian or Alaska Native total(Imputed Code)',
+	CHANGE COLUMN HRAIANM american_indian_or_alaska_native_men INT COMMENT 'American Indian or Alaska Native men', 
+	CHANGE COLUMN XHRAIANM american_indian_or_alaska_native_men_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'American Indian or Alaska Native men(Imputed Code)',
+	CHANGE COLUMN HRAIANW american_indian_or_alaska_native_women INT COMMENT 'American Indian or Alaska Native women', 
+	CHANGE COLUMN XHRAIANW american_indian_or_alaska_native_women_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'American Indian or Alaska Native women(Imputed Code)',
+	CHANGE COLUMN HRASIAT asian_total INT COMMENT 'Asian total', 
+	CHANGE COLUMN XHRASIAT asian_total_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Asian total(Imputed Code)',
+	CHANGE COLUMN HRASIAM asian_men INT COMMENT 'Asian men', 
+	CHANGE COLUMN XHRASIAM asian_men_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Asian men(Imputed Code)',
+	CHANGE COLUMN HRASIAW asian_women INT COMMENT 'Asian women', 
+	CHANGE COLUMN XHRASIAW asian_women_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Asian women(Imputed Code)',
+	CHANGE COLUMN HRBKAAT black_or_african_american_total INT COMMENT 'Black or African American total', 
+	CHANGE COLUMN XHRBKAAT black_or_african_american_total_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Black or African American total(Imputed Code)',
+	CHANGE COLUMN HRBKAAM black_or_african_american_men INT COMMENT 'Black or African American men', 
+	CHANGE COLUMN XHRBKAAM black_or_african_american_men_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Black or African American men(Imputed Code)',
+	CHANGE COLUMN HRBKAAW black_or_african_american_women INT COMMENT 'Black or African American women', 
+	CHANGE COLUMN XHRBKAAW black_or_african_american_women_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Black or African American women(Imputed Code)',
+	CHANGE COLUMN HRHISPT hispanic_or_latino_total INT COMMENT 'Hispanic or Latino total', 
+	CHANGE COLUMN XHRHISPT hispanic_or_latino_total_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Hispanic or Latino total(Imputed Code)',
+	CHANGE COLUMN HRHISPM hispanic_or_latino_men INT COMMENT 'Hispanic or Latino men', 
+	CHANGE COLUMN XHRHISPM hispanic_or_latino_men_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Hispanic or Latino men(Imputed Code)',
+	CHANGE COLUMN HRHISPW hispanic_or_latino_women INT COMMENT 'Hispanic or Latino women', 
+	CHANGE COLUMN XHRHISPW hispanic_or_latino_women_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Hispanic or Latino women(Imputed Code)',
+	CHANGE COLUMN HRNHPIT native_hawaiian_or_other_pacific_islander_total INT COMMENT 'Native Hawaiian or Other Pacific Islander total', 
+	CHANGE COLUMN XHRNHPIT native_hawaiian_or_other_pacific_islander_total_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Native Hawaiian or Other Pacific Islander total(Imputed Code)',
+	CHANGE COLUMN HRNHPIM native_hawaiian_or_other_pacific_islander_men INT COMMENT 'Native Hawaiian or Other Pacific Islander men', 
+	CHANGE COLUMN XHRNHPIM native_hawaiian_or_other_pacific_islander_men_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Native Hawaiian or Other Pacific Islander men(Imputed Code)',
+	CHANGE COLUMN HRNHPIW native_hawaiian_or_other_pacific_islander_women INT COMMENT 'Native Hawaiian or Other Pacific Islander women', 
+	CHANGE COLUMN XHRNHPIW native_hawaiian_or_other_pacific_islander_women_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Native Hawaiian or Other Pacific Islander women(Imputed Code)',
+	CHANGE COLUMN HRWHITT white_total INT COMMENT 'White total', 
+	CHANGE COLUMN XHRWHITT white_total_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'White total(Imputed Code)',
+	CHANGE COLUMN HRWHITM white_men INT COMMENT 'White men', 
+	CHANGE COLUMN XHRWHITM white_men_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'White men(Imputed Code)',
+	CHANGE COLUMN HRWHITW white_women INT COMMENT 'White women', 
+	CHANGE COLUMN XHRWHITW white_women_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'White women(Imputed Code)',
+	CHANGE COLUMN HR2MORT two_or_more_races_total INT COMMENT 'Two or more races total', 
+	CHANGE COLUMN XHR2MORT two_or_more_races_total_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Two or more races total(Imputed Code)',
+	CHANGE COLUMN HR2MORM two_or_more_races_men INT COMMENT 'Two or more races men', 
+	CHANGE COLUMN XHR2MORM two_or_more_races_men_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Two or more races men(Imputed Code)',
+	CHANGE COLUMN HR2MORW two_or_more_races_women INT COMMENT 'Two or more races women', 
+	CHANGE COLUMN XHR2MORW two_or_more_races_women_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Two or more races women(Imputed Code)',
+	CHANGE COLUMN HRUNKNT race_ethnicity_unknown_total INT COMMENT 'Race/ethnicity unknown total', 
+	CHANGE COLUMN XHRUNKNT race_ethnicity_unknown_total_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Race/ethnicity unknown total(Imputed Code)',
+	CHANGE COLUMN HRUNKNM race_ethnicity_unknown_men INT COMMENT 'Race/ethnicity unknown men', 
+	CHANGE COLUMN XHRUNKNM race_ethnicity_unknown_men_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Race/ethnicity unknown men(Imputed Code)',
+	CHANGE COLUMN HRUNKNW race_ethnicity_unknown_women INT COMMENT 'Race/ethnicity unknown women', 
+	CHANGE COLUMN XHRUNKNW race_ethnicity_unknown_women_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Race/ethnicity unknown women(Imputed Code)',
+	CHANGE COLUMN HRNRALT nonresident_alien_total INT COMMENT 'Nonresident alien total', 
+	CHANGE COLUMN XHRNRALT nonresident_alien_total_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Nonresident alien total(Imputed Code)',
+	CHANGE COLUMN HRNRALM nonresident_alien_men INT COMMENT 'Nonresident alien men', 
+	CHANGE COLUMN XHRNRALM nonresident_alien_men_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Nonresident alien men(Imputed Code)',
+	CHANGE COLUMN HRNRALW nonresident_alien_women INT COMMENT 'Nonresident alien women', 
+	CHANGE COLUMN XHRNRALW nonresident_alien_women_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Nonresident alien women(Imputed Code)';
+
+		
+
+/*
+	Drop previous FK constraints from Week 3
+*/
+ALTER TABLE institution_to_congress
+    DROP CONSTRAINT fk_house_id;
+ALTER TABLE institution_to_congress
+    DROP CONSTRAINT fk_senate1_id;
+ALTER TABLE institution_to_congress
+    DROP CONSTRAINT fk_senate2_id;
+ALTER TABLE institution_to_congress
+    DROP CONSTRAINT fk_ipeds_id;
+ALTER TABLE institution
+    DROP CONSTRAINT fk_naics_code;
+ALTER TABLE institution
+    DROP CONSTRAINT fk_state_postal_abbrevation;
+ALTER TABLE institution
+    DROP PRIMARY KEY;
+ALTER TABLE institution_to_congress
+    DROP PRIMARY KEY;
+
+-- Drop former institution table
+DROP TABLE institution;
+
+-- Rename institution_temp to instituion
+RENAME TABLE institution_temp TO institution;
+
+
+-- Set PKs for institution and linking table
+ALTER TABLE institution
+    ADD PRIMARY KEY (ipeds_id);
+ALTER TABLE institution_to_congress
+    ADD PRIMARY KEY (ipeds_id);
+
+-- Add FKs to congress table	
+ALTER TABLE institution_to_congress
+    ADD CONSTRAINT fk_house_id_to_congress
+        FOREIGN KEY (house_id) 
+        REFERENCES congress(id);
+ALTER TABLE institution_to_congress
+    ADD CONSTRAINT fk_senate1_id_to_congress
+        FOREIGN KEY (senate1_id)
+        REFERENCES congress(id);
+ALTER TABLE institution_to_congress
+    ADD CONSTRAINT fk_senate2_id_to_congress
+        FOREIGN KEY (senate2_id)
+        REFERENCES congress(id);
+
+-- Add FKs to institution table
+ALTER TABLE institution_to_congress
+    ADD CONSTRAINT fk_ipeds_id_to_institution
+        FOREIGN KEY (ipeds_id)
+        REFERENCES institution(ipeds_id);
+ALTER TABLE institution
+    ADD CONSTRAINT fk_institution_naics_code_to_naics
+        FOREIGN KEY (naics_code)
+        REFERENCES naics(code);
+ALTER TABLE institution
+    ADD CONSTRAINT fk_institution_state_postal_abbrevation_to_us_states
+        FOREIGN KEY (state)
+        REFERENCES us_states_territories(postal_abbreviation);
+
+-- Add FK to institution_admissions
+ALTER TABLE institution_admissions
+    ADD CONSTRAINT fk_institution_admissions_to_institution
     FOREIGN KEY (ipeds_id) REFERENCES institution(ipeds_id);
+
+-- Add FK to institution_salaries
+ALTER TABLE institution_salaries
+    ADD CONSTRAINT fk_institution_salaries_to_institution
+    FOREIGN KEY (ipeds_id) REFERENCES institution(ipeds_id);
+
