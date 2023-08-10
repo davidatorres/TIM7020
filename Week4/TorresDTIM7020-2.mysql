@@ -1,0 +1,386 @@
+-- Use mydatabase
+USE mydatabase;
+/*
+-- Create congress_office table from imported data in mytemp database
+DROP TABLE IF EXISTS congress_office;
+CREATE TABLE congress_office AS
+    SELECT 
+        bioguide as id,
+        id as office_id,
+        address as address,
+        building as building,
+        suite as suite,
+        city as city,
+        state as state,
+        zip as zip
+    FROM mytemp.offices;
+
+-- Count the number of congressional offices at the state level
+SELECT COUNT(*) FROM congress_office;
+
+-- Parse the address field from the congress table and 
+-- insert the values into the congress_office, we'll drop the column last
+INSERT INTO congress_office (id, office_id, address, building, suite, city, state, zip)
+    SELECT
+        id,
+        LOWER(CONCAT(id, '__DC')) AS office_id,
+        TRIM(SUBSTRING_INDEX(Address, 'Washington ', 1)) AS address,
+        '' AS building,
+        '' AS suite,
+        'Washington' AS city,
+        'DC' AS state,
+        LEFT(SUBSTRING_INDEX(Address, 'DC ', -1), 5) AS zip
+    FROM (
+        SELECT id, address 
+        FROM mydatabase.congress
+    ) AS AddressTable;
+
+-- Count all of the congressional office address (state and federal)
+SELECT COUNT(*) FROM congress_office ORDER BY id, office_id;
+
+-- Create a backup of the congress table before normalizing addresses out of the table
+DROP TABLE IF EXISTS congress_temp;
+CREATE TABLE congress_temp AS
+    SELECT * FROM congress;
+
+-- Convert congress_office.id field to CHAR(7) to match congress.id
+ALTER TABLE congress_office
+CHANGE COLUMN id id CHAR(7);
+
+-- Create FK contraint between congress_office and congress based on 'id' PK in congress
+ALTER TABLE congress_office
+ADD CONSTRAINT fk_congress_office_congress
+FOREIGN KEY (id) REFERENCES congress(id);
+*/
+-- Drop the address field from the congress table
+-- ALTER TABLE congress
+-- DROP COLUMN address;
+
+-- Create institution_imputation_description table
+CREATE TABLE institution_imputation_description (
+    code CHAR(1),
+    description VARCHAR(100)
+);
+
+-- Insert values into the institution_imputation_description table for reporting purposes
+INSERT INTO institution_imputation_description (code, description)
+    VALUES 
+    ('A', 'Not applicable'),
+    ('B', 'Institution left item blank'),
+    ('C', 'Analyst corrected reported value'),
+    ('D', 'Do not know'),
+    ('G', 'Data generated from other data values'),
+    ('H', 'Value not derived - data not usable'),
+    ('J', 'Logical imputation'),
+    ('K', 'Ratio adjustment'),
+    ('L', 'Imputed using the Group Median procedure'),
+    ('N', 'Imputed using Nearest Neighbor procedure'),
+    ('P', 'Imputed using Carry Forward procedure'),
+    ('R', 'Reported'),
+    ('Z', 'Implied zero');
+
+-- Copy adm2021 table from mytemp and create the institution_admissions in mydatabase
+DROP TABLE IF EXISTS institution_admissions;
+CREATE TABLE institution_admissions AS
+    SELECT *, '2021' as 'calendar_year' FROM mytemp.adm2021;
+
+-- Update the institution_admissions table to replace empty strings with -1
+UPDATE institution_admissions SET
+    ADMCON1 = CASE WHEN ADMCON1 = '' THEN '-1' ELSE ADMCON1 END, 
+    ADMCON2 = CASE WHEN ADMCON2 = '' THEN '-1' ELSE ADMCON2 END, 
+    ADMCON3 = CASE WHEN ADMCON3 = '' THEN '-1' ELSE ADMCON3 END, 
+    ADMCON4 = CASE WHEN ADMCON4 = '' THEN '-1' ELSE ADMCON4 END, 
+    ADMCON5 = CASE WHEN ADMCON5 = '' THEN '-1' ELSE ADMCON5 END, 
+    ADMCON6 = CASE WHEN ADMCON6 = '' THEN '-1' ELSE ADMCON6 END, 
+    ADMCON7 = CASE WHEN ADMCON7 = '' THEN '-1' ELSE ADMCON7 END, 
+    ADMCON8 = CASE WHEN ADMCON8 = '' THEN '-1' ELSE ADMCON8 END, 
+    ADMCON9 = CASE WHEN ADMCON9 = '' THEN '-1' ELSE ADMCON9 END, 
+    APPLCN = CASE WHEN APPLCN = '' THEN '-1' ELSE APPLCN END, 
+    APPLCNM = CASE WHEN APPLCNM = '' THEN '-1' ELSE APPLCNM END, 
+    APPLCNW = CASE WHEN APPLCNW = '' THEN '-1' ELSE APPLCNW END, 
+    ADMSSN = CASE WHEN ADMSSN = '' THEN '-1' ELSE ADMSSN END, 
+    ADMSSNM = CASE WHEN ADMSSNM = '' THEN '-1' ELSE ADMSSNM END, 
+    ADMSSNW = CASE WHEN ADMSSNW = '' THEN '-1' ELSE ADMSSNW END, 
+    ENRLT = CASE WHEN ENRLT = '' THEN '-1' ELSE ENRLT END, 
+    ENRLM = CASE WHEN ENRLM = '' THEN '-1' ELSE ENRLM END, 
+    ENRLW = CASE WHEN ENRLW = '' THEN '-1' ELSE ENRLW END, 
+    ENRLFT = CASE WHEN ENRLFT = '' THEN '-1' ELSE ENRLFT END, 
+    ENRLFTM = CASE WHEN ENRLFTM = '' THEN '-1' ELSE ENRLFTM END, 
+    ENRLFTW = CASE WHEN ENRLFTW = '' THEN '-1' ELSE ENRLFTW END, 
+    ENRLPT = CASE WHEN ENRLPT = '' THEN '-1' ELSE ENRLPT END, 
+    ENRLPTM = CASE WHEN ENRLPTM = '' THEN '-1' ELSE ENRLPTM END, 
+    ENRLPTW = CASE WHEN ENRLPTW = '' THEN '-1' ELSE ENRLPTW END, 
+    SATNUM = CASE WHEN SATNUM = '' THEN '-1' ELSE SATNUM END, 
+    SATPCT = CASE WHEN SATPCT = '' THEN '-1' ELSE SATPCT END, 
+    ACTNUM = CASE WHEN ACTNUM = '' THEN '-1' ELSE ACTNUM END, 
+    ACTPCT = CASE WHEN ACTPCT = '' THEN '-1' ELSE ACTPCT END, 
+    SATVR25 = CASE WHEN SATVR25 = '' THEN '-1' ELSE SATVR25 END, 
+    SATVR75 = CASE WHEN SATVR75 = '' THEN '-1' ELSE SATVR75 END, 
+    SATMT25 = CASE WHEN SATMT25 = '' THEN '-1' ELSE SATMT25 END, 
+    SATMT75 = CASE WHEN SATMT75 = '' THEN '-1' ELSE SATMT75 END, 
+    ACTCM25 = CASE WHEN ACTCM25 = '' THEN '-1' ELSE ACTCM25 END, 
+    ACTCM75 = CASE WHEN ACTCM75 = '' THEN '-1' ELSE ACTCM75 END, 
+    ACTEN25 = CASE WHEN ACTEN25 = '' THEN '-1' ELSE ACTEN25 END, 
+    ACTEN75 = CASE WHEN ACTEN75 = '' THEN '-1' ELSE ACTEN75 END, 
+    ACTMT25 = CASE WHEN ACTMT25 = '' THEN '-1' ELSE ACTMT25 END, 
+    ACTMT75 = CASE WHEN ACTMT75 = '' THEN '-1' ELSE ACTMT75 END;
+
+-- Alter the institution_admissions table to change the column names, data types, and comments
+ALTER TABLE institution_admissions
+    CHANGE COLUMN calendar_year calendar_year CHAR(4) COMMENT 'Calendar year of the data',
+    CHANGE COLUMN UNITID ipeds_id CHAR(6) COMMENT 'Unique identification number of the institution',
+    CHANGE COLUMN ADMCON1 secondary_school_gpa TINYINT COMMENT 'Secondary school GPA',
+    CHANGE COLUMN ADMCON2 secondary_school_rank TINYINT COMMENT 'Secondary school rank',
+    CHANGE COLUMN ADMCON3 secondary_school_record TINYINT COMMENT 'Secondary school record',
+    CHANGE COLUMN ADMCON4 college_prep_program_complete TINYINT COMMENT 'Completion of college-preparatory program',
+    CHANGE COLUMN ADMCON5 recommendations TINYINT COMMENT 'Recommendations',
+    CHANGE COLUMN ADMCON6 formal_competencies_demo TINYINT COMMENT 'Formal demonstration of competencies',
+    CHANGE COLUMN ADMCON7 admission_test_scores TINYINT COMMENT 'Admission test scores',
+    CHANGE COLUMN ADMCON8 toefl_scores TINYINT COMMENT 'TOEFL (Test of English as a Foreign Language',
+    CHANGE COLUMN ADMCON9 other_test_scores TINYINT COMMENT 'Other Test (Wonderlic, WISC-III, etc.)',
+    CHANGE COLUMN APPLCN total_applicants INT COMMENT 'Applicants total', 
+    CHANGE COLUMN XAPPLCN total_applicants_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Applicants total (Imputed Code)',
+    CHANGE COLUMN APPLCNM men_applicants INT COMMENT 'Applicants men', 
+    CHANGE COLUMN XAPPLCNM men_applicants_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Applicants men (Imputed Code)',
+    CHANGE COLUMN APPLCNW women_applicants INT COMMENT 'Applicants women', 
+    CHANGE COLUMN XAPPLCNW women_applicants_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Applicants women (Imputed Code)',
+    CHANGE COLUMN ADMSSN total_admissions INT COMMENT 'Admissions total', 
+    CHANGE COLUMN XADMSSN total_admissions_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Admissions total (Imputed Code)',
+    CHANGE COLUMN ADMSSNM men_admissions INT COMMENT 'Admissions men', 
+    CHANGE COLUMN XADMSSNM men_admissions_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Admissions men (Imputed Code)',
+    CHANGE COLUMN ADMSSNW women_admissions INT COMMENT 'Admissions women', 
+    CHANGE COLUMN XADMSSNW women_admissions_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Admissions women (Imputed Code)',
+    CHANGE COLUMN ENRLT total_enrolled INT COMMENT 'Enrolled total', 
+    CHANGE COLUMN XENRLT total_enrolled_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Enrolled total (Imputed Code)',
+    CHANGE COLUMN ENRLM men_enrolled INT COMMENT 'Enrolled  men', 
+    CHANGE COLUMN XENRLM men_enrolled_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Enrolled  men (Imputed Code)',
+    CHANGE COLUMN ENRLW women_enrolled INT COMMENT 'Enrolled  women', 
+    CHANGE COLUMN XENRLW women_enrolled_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Enrolled  women (Imputed Code)',
+    CHANGE COLUMN ENRLFT full_time_enrolled_total INT COMMENT 'Enrolled full time total', 
+    CHANGE COLUMN XENRLFT full_time_enrolled_total_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Enrolled full time total (Imputed Code)',
+    CHANGE COLUMN ENRLFTM full_time_enrolled_men INT COMMENT 'Enrolled full time men', 
+    CHANGE COLUMN XENRLFTM full_time_enrolled_men_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Enrolled full time men (Imputed Code)',
+    CHANGE COLUMN ENRLFTW full_time_enrolled_women INT COMMENT 'Enrolled full time women', 
+    CHANGE COLUMN XENRLFTW full_time_enrolled_women_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Enrolled full time women (Imputed Code)',
+    CHANGE COLUMN ENRLPT part_time_enrolled_total INT COMMENT 'Enrolled part time total', 
+    CHANGE COLUMN XENRLPT part_time_enrolled_total_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Enrolled part time total (Imputed Code)',
+    CHANGE COLUMN ENRLPTM part_time_enrolled_men INT COMMENT 'Enrolled part time men', 
+    CHANGE COLUMN XENRLPTM part_time_enrolled_men_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Enrolled part time men (Imputed Code)',
+    CHANGE COLUMN ENRLPTW part_time_enrolled_women INT COMMENT 'Enrolled part time women', 
+    CHANGE COLUMN XENRLPTW part_time_enrolled_women_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Enrolled part time women (Imputed Code)',
+    CHANGE COLUMN SATNUM first_time_sat_submissions INT COMMENT 'Number of first-time degree/certificate-seeking students submitting SAT scores', 
+    CHANGE COLUMN XSATNUM first_time_sat_submissions_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Number of first-time degree/certificate-seeking students submitting SAT scores (Imputed Code)',
+    CHANGE COLUMN SATPCT pct_first_time_sat_submissions INT COMMENT 'Percent of first-time degree/certificate-seeking students submitting SAT scores', 
+    CHANGE COLUMN XSATPCT pct_first_time_sat_submissions_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Percent of first-time degree/certificate-seeking students submitting SAT scores (Imputed Code)',
+    CHANGE COLUMN ACTNUM first_time_act_submissions INT COMMENT 'Number of first-time degree/certificate-seeking students submitting ACT scores', 
+    CHANGE COLUMN XACTNUM first_time_act_submissions_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Number of first-time degree/certificate-seeking students submitting ACT scores (Imputed Code)',
+    CHANGE COLUMN ACTPCT pct_first_time_act_submissions INT COMMENT 'Percent of first-time degree/certificate-seeking students submitting ACT scores', 
+    CHANGE COLUMN XACTPCT pct_first_time_act_submissions_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Percent of first-time degree/certificate-seeking students submitting ACT scores (Imputed Code)',
+    CHANGE COLUMN SATVR25 sat_reading_writing_25th_pctl INT COMMENT 'SAT Evidence-Based Reading and Writing 25th percentile score', 
+    CHANGE COLUMN XSATVR25 sat_reading_writing_25th_pctl_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'SAT Evidence-Based Reading and Writing 25th percentile score (Imputed Code)',
+    CHANGE COLUMN SATVR75 sat_reading_writing_75th_pctl INT COMMENT 'SAT Evidence-Based Reading and Writing 75th percentile score', 
+    CHANGE COLUMN XSATVR75 sat_reading_writing_75th_pctl_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'SAT Evidence-Based Reading and Writing 75th percentile score (Imputed Code)',
+    CHANGE COLUMN SATMT25 sat_math_25th_pctl INT COMMENT 'SAT Math 25th percentile score', 
+    CHANGE COLUMN XSATMT25 sat_math_25th_pctl_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'SAT Math 25th percentile score (Imputed Code)',
+    CHANGE COLUMN SATMT75 sat_math_75th_pctl INT COMMENT 'SAT Math 75th percentile score', 
+    CHANGE COLUMN XSATMT75 sat_math_75th_pctl_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'SAT Math 75th percentile score (Imputed Code)',
+    CHANGE COLUMN ACTCM25 act_composite_25th_pctl INT COMMENT 'ACT Composite 25th percentile score', 
+    CHANGE COLUMN XACTCM25 act_composite_25th_pctl_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'ACT Composite 25th percentile score (Imputed Code)',
+    CHANGE COLUMN ACTCM75 act_composite_75th_pctl INT COMMENT 'ACT Composite 75th percentile score', 
+    CHANGE COLUMN XACTCM75 act_composite_75th_pctl_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'ACT Composite 75th percentile score (Imputed Code)',
+    CHANGE COLUMN ACTEN25 act_english_25th_pctl INT COMMENT 'ACT English 25th percentile score', 
+    CHANGE COLUMN XACTEN25 act_english_25th_pctl_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'ACT English 25th percentile score (Imputed Code)',
+    CHANGE COLUMN ACTEN75 act_english_75th_pctl INT COMMENT 'ACT English 75th percentile score', 
+    CHANGE COLUMN XACTEN75 act_english_75th_pctl_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'ACT English 75th percentile score (Imputed Code)',
+    CHANGE COLUMN ACTMT25 act_math_25th_pctl INT COMMENT 'ACT Math 25th percentile score', 
+    CHANGE COLUMN XACTMT25 act_math_25th_pctl_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'ACT Math 25th percentile score (Imputed Code)',
+    CHANGE COLUMN ACTMT75 act_math_75th_pctl INT COMMENT 'ACT Math 75th percentile score', 
+    CHANGE COLUMN XACTMT75 act_math_75th_pctl_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'ACT Math 75th percentile score (Imputed Code)';
+
+-- Create FK contraint between institution_admissions and institution based on 'ipeds_id' PK in institution
+ALTER TABLE institution_admissions
+    ADD CONSTRAINT fk_institution_admissions_institution
+    FOREIGN KEY (ipeds_id) REFERENCES institution(ipeds_id);
+
+-- Drop the institution_salaries table if it exists
+DROP TABLE IF EXISTS institution_salaries;
+-- Create the institution_salaries table from the imported data
+CREATE TABLE institution_salaries
+	SELECT *, '2021' as calendar_year FROM mytemp.sal2021_is;
+
+-- Update the institution_salaries table filling in missing values with -1
+UPDATE institution_salaries SET
+	ARANK = CASE WHEN ARANK = '' THEN '-1' ELSE ARANK END, 
+	SAINSTT = CASE WHEN SAINSTT = '' THEN '-1' ELSE SAINSTT END, 
+	SAINSTM = CASE WHEN SAINSTM = '' THEN '-1' ELSE SAINSTM END, 
+	SAINSTW = CASE WHEN SAINSTW = '' THEN '-1' ELSE SAINSTW END, 
+	SA_9MCT = CASE WHEN SA_9MCT = '' THEN '-1' ELSE SA_9MCT END, 
+	SA_9MCM = CASE WHEN SA_9MCM = '' THEN '-1' ELSE SA_9MCM END, 
+	SA_9MCW = CASE WHEN SA_9MCW = '' THEN '-1' ELSE SA_9MCW END, 
+	SATOTLT = CASE WHEN SATOTLT = '' THEN '-1' ELSE SATOTLT END, 
+	SATOTLM = CASE WHEN SATOTLM = '' THEN '-1' ELSE SATOTLM END, 
+	SATOTLW = CASE WHEN SATOTLW = '' THEN '-1' ELSE SATOTLW END, 
+	SA09MCT = CASE WHEN SA09MCT = '' THEN '-1' ELSE SA09MCT END, 
+	SA09MCM = CASE WHEN SA09MCM = '' THEN '-1' ELSE SA09MCM END, 
+	SA09MCW = CASE WHEN SA09MCW = '' THEN '-1' ELSE SA09MCW END, 
+	SA10MCT = CASE WHEN SA10MCT = '' THEN '-1' ELSE SA10MCT END, 
+	SA10MCM = CASE WHEN SA10MCM = '' THEN '-1' ELSE SA10MCM END, 
+	SA10MCW = CASE WHEN SA10MCW = '' THEN '-1' ELSE SA10MCW END, 
+	SA11MCT = CASE WHEN SA11MCT = '' THEN '-1' ELSE SA11MCT END, 
+	SA11MCM = CASE WHEN SA11MCM = '' THEN '-1' ELSE SA11MCM END, 
+	SA11MCW = CASE WHEN SA11MCW = '' THEN '-1' ELSE SA11MCW END, 
+	SA12MCT = CASE WHEN SA12MCT = '' THEN '-1' ELSE SA12MCT END, 
+	SA12MCM = CASE WHEN SA12MCM = '' THEN '-1' ELSE SA12MCM END, 
+	SA12MCW = CASE WHEN SA12MCW = '' THEN '-1' ELSE SA12MCW END, 
+	SAOUTLT = CASE WHEN SAOUTLT = '' THEN '-1' ELSE SAOUTLT END, 
+	SAOUTLM = CASE WHEN SAOUTLM = '' THEN '-1' ELSE SAOUTLM END, 
+	SAOUTLW = CASE WHEN SAOUTLW = '' THEN '-1' ELSE SAOUTLW END, 
+	SA09MOT = CASE WHEN SA09MOT = '' THEN '-1' ELSE SA09MOT END, 
+	SA09MOM = CASE WHEN SA09MOM = '' THEN '-1' ELSE SA09MOM END, 
+	SA09MOW = CASE WHEN SA09MOW = '' THEN '-1' ELSE SA09MOW END, 
+	SA10MOT = CASE WHEN SA10MOT = '' THEN '-1' ELSE SA10MOT END, 
+	SA10MOM = CASE WHEN SA10MOM = '' THEN '-1' ELSE SA10MOM END, 
+	SA10MOW = CASE WHEN SA10MOW = '' THEN '-1' ELSE SA10MOW END, 
+	SA11MOT = CASE WHEN SA11MOT = '' THEN '-1' ELSE SA11MOT END, 
+	SA11MOM = CASE WHEN SA11MOM = '' THEN '-1' ELSE SA11MOM END, 
+	SA11MOW = CASE WHEN SA11MOW = '' THEN '-1' ELSE SA11MOW END, 
+	SA12MOT = CASE WHEN SA12MOT = '' THEN '-1' ELSE SA12MOT END, 
+	SA12MOM = CASE WHEN SA12MOM = '' THEN '-1' ELSE SA12MOM END, 
+	SA12MOW = CASE WHEN SA12MOW = '' THEN '-1' ELSE SA12MOW END, 
+	SAEQ9OT = CASE WHEN SAEQ9OT = '' THEN '-1' ELSE SAEQ9OT END, 
+	SAEQ9OM = CASE WHEN SAEQ9OM = '' THEN '-1' ELSE SAEQ9OM END, 
+	SAEQ9OW = CASE WHEN SAEQ9OW = '' THEN '-1' ELSE SAEQ9OW END, 
+	SAEQ9AT = CASE WHEN SAEQ9AT = '' THEN '-1' ELSE SAEQ9AT END, 
+	SAEQ9AM = CASE WHEN SAEQ9AM = '' THEN '-1' ELSE SAEQ9AM END, 
+	SAEQ9AW = CASE WHEN SAEQ9AW = '' THEN '-1' ELSE SAEQ9AW END, 
+	SA09MAT = CASE WHEN SA09MAT = '' THEN '-1' ELSE SA09MAT END, 
+	SA09MAM = CASE WHEN SA09MAM = '' THEN '-1' ELSE SA09MAM END, 
+	SA09MAW = CASE WHEN SA09MAW = '' THEN '-1' ELSE SA09MAW END, 
+	SA10MAT = CASE WHEN SA10MAT = '' THEN '-1' ELSE SA10MAT END, 
+	SA10MAM = CASE WHEN SA10MAM = '' THEN '-1' ELSE SA10MAM END, 
+	SA10MAW = CASE WHEN SA10MAW = '' THEN '-1' ELSE SA10MAW END, 
+	SA11MAT = CASE WHEN SA11MAT = '' THEN '-1' ELSE SA11MAT END, 
+	SA11MAM = CASE WHEN SA11MAM = '' THEN '-1' ELSE SA11MAM END, 
+	SA11MAW = CASE WHEN SA11MAW = '' THEN '-1' ELSE SA11MAW END, 
+	SA12MAT = CASE WHEN SA12MAT = '' THEN '-1' ELSE SA12MAT END, 
+	SA12MAM = CASE WHEN SA12MAM = '' THEN '-1' ELSE SA12MAM END, 
+	SA12MAW = CASE WHEN SA12MAW = '' THEN '-1' ELSE SA12MAW END; 
+
+-- Alter institution_salaries table renaming columns, changing data types, and adding comments
+ALTER TABLE institution_salaries
+    CHANGE COLUMN calendar_year calendar_year CHAR(4) COMMENT 'Calendar year of the data',
+	CHANGE COLUMN UNITID ipeds_id CHAR(6) COMMENT 'Unique identification number of the institution',
+	CHANGE COLUMN ARANK academic_rank INT COMMENT 'Academic rank', 
+	CHANGE COLUMN SAINSTT staff_total INT COMMENT 'Instructional staff - total', 
+	CHANGE COLUMN XSAINSTT staff_total_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff - total (Imputed Code)',
+	CHANGE COLUMN SAINSTM staff_men INT COMMENT 'Instructional staff - men', 
+	CHANGE COLUMN XSAINSTM staff_men_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff - men (Imputed Code)',
+	CHANGE COLUMN SAINSTW staff_women INT COMMENT 'Instructional staff - women', 
+	CHANGE COLUMN XSAINSTW staff_women_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff - women (Imputed Code)',
+	CHANGE COLUMN SA_9MCT contract_lt_9_month_total INT COMMENT 'Instructional staff on less than 9-month contract-total', 
+	CHANGE COLUMN XSA_9MCT contract_lt_9_month_total_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff on less than 9-month contract-total (Imputed Code)',
+	CHANGE COLUMN SA_9MCM contract_lt_9_month_men INT COMMENT 'Instructional staff on less than 9-month contract-men', 
+	CHANGE COLUMN XSA_9MCM contract_lt_9_month_men_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff on less than 9-month contract-men (Imputed Code)',
+	CHANGE COLUMN SA_9MCW contract_lt_9_month_women INT COMMENT 'Instructional staff on less than 9-month contract-women', 
+	CHANGE COLUMN XSA_9MCW contract_lt_9_month_women_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff on less than 9-month contract-women (Imputed Code)',
+	CHANGE COLUMN SATOTLT contract_9_12_month_total INT COMMENT 'Instructional staff on 9, 10, 11 or 12 month contract-total', 
+	CHANGE COLUMN XSATOTLT contract_9_12_month_total_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff on 9, 10, 11 or 12 month contract-total (Imputed Code)',
+	CHANGE COLUMN SATOTLM contract_9_12_month_men INT COMMENT 'Instructional staff on 9, 10, 11 or 12 month contract-men', 
+	CHANGE COLUMN XSATOTLM contract_9_12_month_men_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff on 9, 10, 11 or 12 month contract-men (Imputed Code)',
+	CHANGE COLUMN SATOTLW contract_9_12_month_women INT COMMENT 'Instructional staff on 9, 10, 11 or 12 month contract-women', 
+	CHANGE COLUMN XSATOTLW contract_9_12_month_women_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff on 9, 10, 11 or 12 month contract-women (Imputed Code)',
+	CHANGE COLUMN SA09MCT contract_9_month_total INT COMMENT 'Instructional staff on 9-month contract-total', 
+	CHANGE COLUMN XSA09MCT contract_9_month_total_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff on 9-month contract-total (Imputed Code)',
+	CHANGE COLUMN SA09MCM contract_9_month_men INT COMMENT 'Instructional staff on 9-month contract-men', 
+	CHANGE COLUMN XSA09MCM contract_9_month_men_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff on 9-month contract-men (Imputed Code)',
+	CHANGE COLUMN SA09MCW contract_9_month_women INT COMMENT 'Instructional staff on 9-month contract-women', 
+	CHANGE COLUMN XSA09MCW contract_9_month_women_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff on 9-month contract-women (Imputed Code)',
+	CHANGE COLUMN SA10MCT contract_10_month_total INT COMMENT 'Instructional staff on 10-month contract-total', 
+	CHANGE COLUMN XSA10MCT contract_10_month_total_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff on 10-month contract-total (Imputed Code)',
+	CHANGE COLUMN SA10MCM contract_10_month_men INT COMMENT 'Instructional staff on 10-month contract-men', 
+	CHANGE COLUMN XSA10MCM contract_10_month_men_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff on 10-month contract-men (Imputed Code)',
+	CHANGE COLUMN SA10MCW contract_10_month_women INT COMMENT 'Instructional staff on 10-month contract-women', 
+	CHANGE COLUMN XSA10MCW contract_10_month_women_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff on 10-month contract-women (Imputed Code)',
+	CHANGE COLUMN SA11MCT contract_11_month_total INT COMMENT 'Instructional staff on 11-month contract-total', 
+	CHANGE COLUMN XSA11MCT contract_11_month_total_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff on 11-month contract-total (Imputed Code)',
+	CHANGE COLUMN SA11MCM contract_11_month_men INT COMMENT 'Instructional staff on 11-month contract-men', 
+	CHANGE COLUMN XSA11MCM contract_11_month_men_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff on 11-month contract-men (Imputed Code)',
+	CHANGE COLUMN SA11MCW contract_11_month_women INT COMMENT 'Instructional staff on 11-month contract-women', 
+	CHANGE COLUMN XSA11MCW contract_11_month_women_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff on 11-month contract-women (Imputed Code)',
+	CHANGE COLUMN SA12MCT contract_12_month_total INT COMMENT 'Instructional staff on 12-month contract total', 
+	CHANGE COLUMN XSA12MCT contract_12_month_total_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff on 12-month contract total (Imputed Code)',
+	CHANGE COLUMN SA12MCM contract_12_month_men INT COMMENT 'Instructional staff on 12-month contract men', 
+	CHANGE COLUMN XSA12MCM contract_12_month_men_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff on 12-month contract men (Imputed Code)',
+	CHANGE COLUMN SA12MCW contract_12_month_women INT COMMENT 'Instructional staff on 12--month contract women', 
+	CHANGE COLUMN XSA12MCW contract_12_month_women_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Instructional staff on 12--month contract women (Imputed Code)',
+	CHANGE COLUMN SAOUTLT salary_total INT COMMENT 'Salary outlays - total', 
+	CHANGE COLUMN XSAOUTLT salary_total_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Salary outlays - total (Imputed Code)',
+	CHANGE COLUMN SAOUTLM salary_men INT COMMENT 'Salary outlays - men', 
+	CHANGE COLUMN XSAOUTLM salary_men_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Salary outlays - men (Imputed Code)',
+	CHANGE COLUMN SAOUTLW salary_women INT COMMENT 'Salary outlays - women', 
+	CHANGE COLUMN XSAOUTLW salary_women_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Salary outlays - women (Imputed Code)',
+	CHANGE COLUMN SA09MOT salary_contract_9_month_total INT COMMENT 'Salary outlays for instructional staff on 9-month contract-total', 
+	CHANGE COLUMN XSA09MOT salary_contract_9_month_total_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Salary outlays for instructional staff on 9-month contract-total (Imputed Code)',
+	CHANGE COLUMN SA09MOM salary_contract_9_month_men INT COMMENT 'Salary outlays for instructional staff on 9-month contract-men', 
+	CHANGE COLUMN XSA09MOM salary_contract_9_month_men_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Salary outlays for instructional staff on 9-month contract-men (Imputed Code)',
+	CHANGE COLUMN SA09MOW salary_contract_9_month_women INT COMMENT 'Salary outlays for instructional staff on 9-month contract-women', 
+	CHANGE COLUMN XSA09MOW salary_contract_9_month_women_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Salary outlays for instructional staff on 9-month contract-women (Imputed Code)',
+	CHANGE COLUMN SA10MOT salary_contract_10_month_total INT COMMENT 'Salary outlays for instructional staff on 10-month contract-total', 
+	CHANGE COLUMN XSA10MOT salary_contract_10_month_total_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Salary outlays for instructional staff on 10-month contract-total (Imputed Code)',
+	CHANGE COLUMN SA10MOM salary_contract_10_month_men INT COMMENT 'Salary outlays for instructional staff on 10-month contract-men', 
+	CHANGE COLUMN XSA10MOM salary_contract_10_month_men_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Salary outlays for instructional staff on 10-month contract-men (Imputed Code)',
+	CHANGE COLUMN SA10MOW salary_contract_10_month_women INT COMMENT 'Salary outlays for instructional staff on 10-month contract-women', 
+	CHANGE COLUMN XSA10MOW salary_contract_10_month_women_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Salary outlays for instructional staff on 10-month contract-women (Imputed Code)',
+	CHANGE COLUMN SA11MOT salary_contract_11_month_total INT COMMENT 'Salary outlays for instructional staff on 11-month contract-total', 
+	CHANGE COLUMN XSA11MOT salary_contract_11_month_total_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Salary outlays for instructional staff on 11-month contract-total (Imputed Code)',
+	CHANGE COLUMN SA11MOM salary_contract_11_month_men INT COMMENT 'Salary outlays for instructional staff on 11-month contract-men', 
+	CHANGE COLUMN XSA11MOM salary_contract_11_month_men_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Salary outlays for instructional staff on 11-month contract-men (Imputed Code)',
+	CHANGE COLUMN SA11MOW salary_contract_11_month_women INT COMMENT 'Salary outlays for instructional staff on 11-month contract-women', 
+	CHANGE COLUMN XSA11MOW salary_contract_11_month_women_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Salary outlays for instructional staff on 11-month contract-women (Imputed Code)',
+	CHANGE COLUMN SA12MOT salary_contract_12_month_total INT COMMENT 'Salary outlays for instructional staff on 12-month contract-total', 
+	CHANGE COLUMN XSA12MOT salary_contract_12_month_total_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Salary outlays for instructional staff on 12-month contract-total (Imputed Code)',
+	CHANGE COLUMN SA12MOM salary_contract_12_month_men INT COMMENT 'Salary outlays for instructional staff on 12-month contract-men', 
+	CHANGE COLUMN XSA12MOM salary_contract_12_month_men_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Salary outlays for instructional staff on 12-month contract-men (Imputed Code)',
+	CHANGE COLUMN SA12MOW salary_contract_12_month_women INT COMMENT 'Salary outlays for instructional staff on 12-month contract-women', 
+	CHANGE COLUMN XSA12MOW salary_contract_12_month_women_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Salary outlays for instructional staff on 12-month contract-women (Imputed Code)',
+	CHANGE COLUMN SAEQ9OT salary_equated_contract_9_month_total INT COMMENT 'Salary outlays for instructional staff equated to a 9-month contract-total', 
+	CHANGE COLUMN XSAEQ9OT salary_equated_contract_9_month_total_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Salary outlays for instructional staff equated to a 9-month contract-total (Imputed Code)',
+	CHANGE COLUMN SAEQ9OM salary_equated_contract_9_month_men INT COMMENT 'Salary outlays for instructional staff equated to a 9-month contract-men', 
+	CHANGE COLUMN XSAEQ9OM salary_equated_contract_9_month_men_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Salary outlays for instructional staff equated to a 9-month contract-men (Imputed Code)',
+	CHANGE COLUMN SAEQ9OW salary_equated_contract_9_month_women INT COMMENT 'Salary outlays for instructional staff equated to a 9-month contract-women', 
+	CHANGE COLUMN XSAEQ9OW salary_equated_contract_9_month_women_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Salary outlays for instructional staff equated to a 9-month contract-women (Imputed Code)',
+	CHANGE COLUMN SAEQ9AT avg_salary_equated_contract_9_month_total INT COMMENT 'Average salary for instructional staff equated to a 9-month contract-total', 
+	CHANGE COLUMN XSAEQ9AT avg_salary_equated_contract_9_month_total_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Average salary for instructional staff equated to a 9-month contract-total (Imputed Code)',
+	CHANGE COLUMN SAEQ9AM avg_salary_equated_contract_9_month_men INT COMMENT 'Average salary for instructional staff equated to a 9-month contract-men', 
+	CHANGE COLUMN XSAEQ9AM avg_salary_equated_contract_9_month_men_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Average salary for instructional staff equated to a 9-month contract-men (Imputed Code)',
+	CHANGE COLUMN SAEQ9AW avg_salary_equated_contract_9_month_women INT COMMENT 'Average salary for instructional staff equated to a 9-month contract-women', 
+	CHANGE COLUMN XSAEQ9AW avg_salary_equated_contract_9_month_women_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Average salary for instructional staff equated to a 9-month contract-women (Imputed Code)',
+	CHANGE COLUMN SA09MAT avg_salary_contract_9_month_total INT COMMENT 'Average salary for instructional staff on 9-month contract-total', 
+	CHANGE COLUMN XSA09MAT avg_salary_contract_9_month_total_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Average salary for instructional staff on 9-month contract-total (Imputed Code)',
+	CHANGE COLUMN SA09MAM avg_salary_contract_9_month_men INT COMMENT 'Average salary for instructional staff on 9-month contract-men', 
+	CHANGE COLUMN XSA09MAM avg_salary_contract_9_month_men_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Average salary for instructional staff on 9-month contract-men (Imputed Code)',
+	CHANGE COLUMN SA09MAW avg_salary_contract_9_month_women INT COMMENT 'Average salary for instructional staff on 9-month contract-women', 
+	CHANGE COLUMN XSA09MAW avg_salary_contract_9_month_women_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Average salary for instructional staff on 9-month contract-women (Imputed Code)',
+	CHANGE COLUMN SA10MAT avg_salary_contract_10_month_total INT COMMENT 'Average salary for instructional staff on 10-month contract-total', 
+	CHANGE COLUMN XSA10MAT avg_salary_contract_10_month_total_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Average salary for instructional staff on 10-month contract-total (Imputed Code)',
+	CHANGE COLUMN SA10MAM avg_salary_contract_10_month_men INT COMMENT 'Average salary for instructional staff on 10-month contract-men', 
+	CHANGE COLUMN XSA10MAM avg_salary_contract_10_month_men_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Average salary for instructional staff on 10-month contract-men (Imputed Code)',
+	CHANGE COLUMN SA10MAW avg_salary_contract_10_month_women INT COMMENT 'Average salary for instructional staff on 10-month contract-women', 
+	CHANGE COLUMN XSA10MAW avg_salary_contract_10_month_women_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Average salary for instructional staff on 10-month contract-women (Imputed Code)',
+	CHANGE COLUMN SA11MAT avg_salary_contract_11_month_total INT COMMENT 'Average salary for instructional staff on 11-month contract-total', 
+	CHANGE COLUMN XSA11MAT avg_salary_contract_11_month_total_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Average salary for instructional staff on 11-month contract-total (Imputed Code)',
+	CHANGE COLUMN SA11MAM avg_salary_contract_11_month_men INT COMMENT 'Average salary for instructional staff on 11-month contract-men', 
+	CHANGE COLUMN XSA11MAM avg_salary_contract_11_month_men_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Average salary for instructional staff on 11-month contract-men (Imputed Code)',
+	CHANGE COLUMN SA11MAW avg_salary_contract_11_month_women INT COMMENT 'Average salary for instructional staff on 11-month contract-women', 
+	CHANGE COLUMN XSA11MAW avg_salary_contract_11_month_women_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Average salary for instructional staff on 11-month contract-women (Imputed Code)',
+	CHANGE COLUMN SA12MAT avg_salary_contract_12_month_total INT COMMENT 'Average salary for instructional staff on 12-month contract-total', 
+	CHANGE COLUMN XSA12MAT avg_salary_contract_12_month_total_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Average salary for instructional staff on 12-month contract-total (Imputed Code)',
+	CHANGE COLUMN SA12MAM avg_salary_contract_12_month_men INT COMMENT 'Average salary for instructional staff on 12-month contract-men', 
+	CHANGE COLUMN XSA12MAM avg_salary_contract_12_month_men_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Average salary for instructional staff on 12-month contract-men (Imputed Code)',
+	CHANGE COLUMN SA12MAW avg_salary_contract_12_month_women INT COMMENT 'Average salary for instructional staff on 12-month contract-women', 
+	CHANGE COLUMN XSA12MAW avg_salary_contract_12_month_women_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Average salary for instructional staff on 12-month contract-women (Imputed Code)';
+
+    -- Create FK contraint between institution_salaries and institution based on 'ipeds_id' PK in institution
+ALTER TABLE institution_salaries
+    ADD CONSTRAINT fk_institution_salaries_institution
+    FOREIGN KEY (ipeds_id) REFERENCES institution(ipeds_id);
