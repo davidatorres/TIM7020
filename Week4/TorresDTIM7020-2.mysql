@@ -1,67 +1,87 @@
 -- Use mydatabase
 USE mydatabase;
 
--- -- Create congress_office table from imported data in mytemp database
--- DROP TABLE IF EXISTS congress_office;
--- CREATE TABLE congress_office AS
---     SELECT 
---         bioguide as id,
---         id as office_id,
---         address as address,
---         building as building,
---         suite as suite,
---         city as city,
---         state as state,
---         zip as zip
---     FROM mytemp.offices;
+-- Create congress_office table from imported data in mytemp database
+DROP TABLE IF EXISTS congress_office;
+CREATE TABLE congress_office AS
+    SELECT 
+        bioguide as id,
+        id as office_id,
+        address as address,
+        building as building,
+        suite as suite,
+        city as city,
+        state as state,
+        zip as zip
+    FROM mytemp.offices;
 
--- -- Count the number of congressional offices at the state level
--- SELECT COUNT(*) FROM congress_office;
+-- Count the number of congressional offices at the state level
+SELECT COUNT(*) FROM congress_office;
 
--- -- Parse the address field from the congress table and 
--- -- insert the values into the congress_office, we'll drop the column last
--- INSERT INTO congress_office (id, office_id, address, building, suite, city, state, zip)
---     SELECT
---         id,
---         LOWER(CONCAT(id, '__DC')) AS office_id,
---         TRIM(SUBSTRING_INDEX(Address, 'Washington ', 1)) AS address,
---         '' AS building,
---         '' AS suite,
---         'Washington' AS city,
---         'DC' AS state,
---         LEFT(SUBSTRING_INDEX(Address, 'DC ', -1), 5) AS zip
---     FROM (
---         SELECT id, address 
---         FROM mydatabase.congress
---     ) AS AddressTable;
+-- Parse the address field from the congress table and 
+-- insert the values into the congress_office, we'll drop the column last
+INSERT INTO congress_office (id, office_id, address, building, suite, city, state, zip)
+    SELECT
+        id,
+        LOWER(CONCAT(id, '__DC')) AS office_id,
+        TRIM(SUBSTRING_INDEX(Address, 'Washington ', 1)) AS address,
+        '' AS building,
+        '' AS suite,
+        'Washington' AS city,
+        'DC' AS state,
+        LEFT(SUBSTRING_INDEX(Address, 'DC ', -1), 5) AS zip
+    FROM (
+        SELECT id, address 
+        FROM mydatabase.congress
+    ) AS AddressTable;
 
--- -- Count all of the congressional office address (state and federal)
--- SELECT COUNT(*) FROM congress_office ORDER BY id, office_id;
+-- Count all of the congressional office address (state and federal)
+SELECT COUNT(*) FROM congress_office ORDER BY id, office_id;
 
--- -- Create a backup of the congress table before normalizing addresses out of the table
--- DROP TABLE IF EXISTS congress_temp;
--- CREATE TABLE congress_temp AS
---     SELECT * FROM congress;
+-- Create a backup of the congress table before normalizing addresses out of the table
+DROP TABLE IF EXISTS congress_temp;
+CREATE TABLE congress_temp AS
+    SELECT * FROM congress;
 
--- -- Convert congress_office.id field to CHAR(7) to match congress.id
--- ALTER TABLE congress_office
--- 	CHANGE COLUMN id id CHAR(7);
+-- Convert congress_office.id field to CHAR(7) to match congress.id
+ALTER TABLE congress_office
+	CHANGE COLUMN id id CHAR(7);
 
--- -- Create FK contraint between congress_office and congress based on 'id' PK in congress
--- ALTER TABLE congress_office
--- 	ADD CONSTRAINT fk_congress_office_congress
--- 	FOREIGN KEY (id) REFERENCES congress(id);
+-- Create FK contraint between congress_office and congress based on 'id' PK in congress
+ALTER TABLE congress_office
+	ADD CONSTRAINT fk_congress_office_congress
+	FOREIGN KEY (id) REFERENCES congress(id);
 
--- -- Drop the address field from the congress table
--- ALTER TABLE congress
---     DROP COLUMN address;
+-- Drop the address field from the congress table
+ALTER TABLE congress
+    DROP COLUMN address;
 
--- Drop the temp table
--- DROP TABLE congress_temp;
+Drop the temp table
+DROP TABLE congress_temp;
 
 /*
 Bring in IPEDS 2021 data
 */
+
+/*
+	Drop PK & FK constraints from Week 3
+*/
+ALTER TABLE institution_to_congress
+    DROP CONSTRAINT fk_house_id;
+ALTER TABLE institution_to_congress
+    DROP CONSTRAINT fk_senate1_id;
+ALTER TABLE institution_to_congress
+    DROP CONSTRAINT fk_senate2_id;
+ALTER TABLE institution_to_congress
+    DROP CONSTRAINT fk_ipeds_id;
+ALTER TABLE institution
+    DROP CONSTRAINT fk_naics_code;
+ALTER TABLE institution
+    DROP CONSTRAINT fk_state_postal_abbrevation;
+ALTER TABLE institution
+    DROP PRIMARY KEY;
+ALTER TABLE institution_to_congress
+    DROP PRIMARY KEY;
 
 -- Copy 2018 institution table to institution_2018
 DROP TABLE IF EXISTS institution_2018;
@@ -225,38 +245,60 @@ ALTER TABLE institution_temp
 	CHANGE COLUMN DFRCGID data_feedback_report_comparison_group_created_by_nces TEXT COMMENT 'Data Feedback Report comparison group created by NCES',
 	CHANGE COLUMN DFRCUSCG data_feedback_report_institution_submitted TEXT COMMENT 'Data Feedback Report - Institution submitted a custom comparison group';
 
+/*
+	Recreate the institution_to_congress bridge table
+*/
+
+-- Drop table to encode if it exists
+DROP TABLE IF EXISTS institution_encode_congress ;
+-- Create table to be encoded with with congressional information
+CREATE TABLE institution_encode_congress AS
+	SELECT ipeds_id, 
+		latituded_location_of_institution AS latitude,
+		longitude_location_of_institution AS longitude
+	FROM institution;
+-- Export table to CSV file    
+SELECT * INTO OUTFILE '/institution_encode_congress.csv'
+	FIELDS TERMINATED BY ',' 
+	ENCLOSED BY '"'
+	LINES TERMINATED BY '\n'
+	FROM institution_encode_congress;
+/*
+-- Use geocod.io to enclode congressional districts by lat/long
+*/
+-- Import table from CSV file
+LOAD DATA INFILE '/institution_encode_congress.csv' 
+	INTO TABLE institution_encoded_congress 
+	FIELDS TERMINATED BY ',' 
+	ENCLOSED BY '"' 
+	LINES TERMINATED BY '\n'
+	IGNORE 1 ROWS;
+-- Drop bridge table if it exists
+DROP TABLE IF EXISTS institution_to_congress;
+-- Create new bridge table
+CREATE TABLE institution_to_congress AS
+	SELECT *, NULL as house_id, NULL as senate1_id, NULL as senate2_id
+		FROM institution_encoded_congress;
+-- Update the bridge table with the House Rep Id
+UPDATE institution_to_congress
+	JOIN congress ON institution_to_congress.district = congress.district
+	SET house1_id = congress.id
+    WHERE congress.chamber_id = 2;
+-- Update the bridge table with the Senate Ids
+UPDATE institution_to_congress
+	JOIN congress ON institution_to_congress.state = congress.state
+	SET senate1_id = MIN(congress.id),
+		senate2_id = MAX(congress.id)
+    WHERE congress.chamber_id = 1;
+-- Drop any rows without state abbreviations
+DELETE FROM institution_to_congress WHERE state IS NULL;
 -- Delete rows that have not been encoded and don't have a link back to the 118th congress
 DELETE FROM institution_temp 
-	WHERE ipeds_id NOT IN (
-		SELECT ipeds_id FROM institution_to_congress
-		);
-
-/*
-	Create institution_imputation_description table and populate the code/description
-*/
--- Create institution_imputation_description table
-DROP TABLE IF EXISTS institution_imputation_description;
-CREATE TABLE institution_imputation_description (
-    code CHAR(1),
-    description VARCHAR(100),
-	PRIMARY KEY (code));
-
--- Insert values into the institution_imputation_description table for reporting purposes
-INSERT INTO institution_imputation_description (code, description)
-    VALUES 
-    ('A', 'Not applicable'),
-    ('B', 'Institution left item blank'),
-    ('C', 'Analyst corrected reported value'),
-    ('D', 'Do not know'),
-    ('G', 'Data generated from other data values'),
-    ('H', 'Value not derived - data not usable'),
-    ('J', 'Logical imputation'),
-    ('K', 'Ratio adjustment'),
-    ('L', 'Imputed using the Group Median procedure'),
-    ('N', 'Imputed using Nearest Neighbor procedure'),
-    ('P', 'Imputed using Carry Forward procedure'),
-    ('R', 'Reported'),
-    ('Z', 'Implied zero');
+	WHERE ipeds_id NOT IN (SELECT ipeds_id FROM institution_to_congress);
+-- Drop former institution table
+DROP TABLE institution;
+-- Rename institution_temp to instituion
+RENAME TABLE institution_temp TO institution;
 
 /*
 	Create the institution_admission table and populate with calendar year 2021 data 
@@ -266,7 +308,7 @@ DROP TABLE IF EXISTS institution_admissions;
 CREATE TABLE institution_admissions AS
     SELECT *, '2021' as 'calendar_year' FROM mytemp.adm2021;
 
--- Update the institution_admissions table to replace empty strings with -1
+-- Update the institution_admissions table to replace empty strings with -9
 UPDATE institution_admissions SET
     ADMCON1 = CASE WHEN ADMCON1 = '' THEN '-9' ELSE ADMCON1 END, 
     ADMCON2 = CASE WHEN ADMCON2 = '' THEN '-9' ELSE ADMCON2 END, 
@@ -307,7 +349,7 @@ UPDATE institution_admissions SET
     ACTMT25 = CASE WHEN ACTMT25 = '' THEN '-9' ELSE ACTMT25 END, 
     ACTMT75 = CASE WHEN ACTMT75 = '' THEN '-9' ELSE ACTMT75 END;
 
--- Alter the institution_admissions table to change the column names, data types, and comments
+-- Alter the institution_admissions table to change the column names, data types, and add comments
 ALTER TABLE institution_admissions
     CHANGE COLUMN calendar_year calendar_year CHAR(4) COMMENT 'Calendar year of the data',
     CHANGE COLUMN UNITID ipeds_id CHAR(6) COMMENT 'Unique identification number of the institution',
@@ -378,20 +420,20 @@ ALTER TABLE institution_admissions
     CHANGE COLUMN XACTMT25 act_math_25th_pctl_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'ACT Math 25th percentile score (Imputed Code)',
     CHANGE COLUMN ACTMT75 act_math_75th_pctl INT COMMENT 'ACT Math 75th percentile score', 
     CHANGE COLUMN XACTMT75 act_math_75th_pctl_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'ACT Math 75th percentile score (Imputed Code)';
-
--- Delete rows that have not been encoded
+-- Delete rows that don't have a match in the bridge table
 DELETE FROM institution_admissions 
-	WHERE ipeds_id NOT IN (
-		SELECT ipeds_id FROM institution_to_congress
-		);
+	WHERE ipeds_id NOT IN (SELECT ipeds_id FROM institution_to_congress);
 
+
+/*
+    Create the institution_salaries table and populate with calendar year 2021 data 
+*/
 -- Drop the institution_salaries table if it exists
 DROP TABLE IF EXISTS institution_salaries;
 -- Create the institution_salaries table from the imported data
 CREATE TABLE institution_salaries
 	SELECT *, '2021' as calendar_year FROM mytemp.sal2021_is;
-
--- Update the institution_salaries table filling in missing values with -1
+-- Update the institution_salaries table filling in missing values with -9
 UPDATE institution_salaries SET
 	ARANK = CASE WHEN ARANK = '' THEN '-9' ELSE ARANK END, 
 	SAINSTT = CASE WHEN SAINSTT = '' THEN '-9' ELSE SAINSTT END, 
@@ -448,7 +490,6 @@ UPDATE institution_salaries SET
 	SA12MAT = CASE WHEN SA12MAT = '' THEN '-9' ELSE SA12MAT END, 
 	SA12MAM = CASE WHEN SA12MAM = '' THEN '-9' ELSE SA12MAM END, 
 	SA12MAW = CASE WHEN SA12MAW = '' THEN '-9' ELSE SA12MAW END; 
-
 -- Alter institution_salaries table renaming columns, changing data types, and adding comments
 ALTER TABLE institution_salaries
     CHANGE COLUMN calendar_year calendar_year CHAR(4) COMMENT 'Calendar year of the data',
@@ -562,18 +603,19 @@ ALTER TABLE institution_salaries
 	CHANGE COLUMN XSA12MAM avg_salary_contract_12_month_men_imp ENUM ('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Average salary for instructional staff on 12-month contract-men (Imputed Code)',
 	CHANGE COLUMN SA12MAW avg_salary_contract_12_month_women INT COMMENT 'Average salary for instructional staff on 12-month contract-women', 
 	CHANGE COLUMN XSA12MAW avg_salary_contract_12_month_women_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Average salary for instructional staff on 12-month contract-women (Imputed Code)';
-
--- Delete rows that have not been encoded
+-- Delete rows that don't have a match in the bridge table
 DELETE FROM institution_salaries 
-	WHERE ipeds_id NOT IN (
-		SELECT ipeds_id FROM institution_to_congress
-		);
+	WHERE ipeds_id NOT IN (SELECT ipeds_id FROM institution_to_congress);
 
--- Copy s2021_oc table from mytemp and create the institution_diversity in mydatabase
+/*
+    Create institution_diversity table
+*/
+-- Drop institution_diversity if it exists
 DROP TABLE IF EXISTS institution_diversity;
+-- Copy s2021_oc table from mytemp and create the institution_diversity in mydatabase
 CREATE TABLE institution_diversity AS
     SELECT *, '2021' as 'calendar_year' FROM mytemp.s2021_oc;
-
+-- Update the institution_diversity table filling in missing values with -9
 UPDATE institution_diversity SET
 	STAFFCAT = CASE WHEN STAFFCAT = '' THEN 'NA' ELSE STAFFCAT END, 
 	FTPT = CASE WHEN FTPT = '' THEN '-9' ELSE FTPT END, 
@@ -609,7 +651,7 @@ UPDATE institution_diversity SET
 	HRNRALT = CASE WHEN HRNRALT = '' THEN '-9' ELSE HRNRALT END, 
 	HRNRALM = CASE WHEN HRNRALM = '' THEN '-9' ELSE HRNRALM END, 
 	HRNRALW = CASE WHEN HRNRALW = '' THEN '-9' ELSE HRNRALW END;
-
+-- Alter institution_diversity table renaming columns, changing data types, and adding comments
 ALTER TABLE institution_diversity
 	CHANGE COLUMN calendar_year calendar_year CHAR(4) COMMENT 'Calendar year of the data',
 	CHANGE COLUMN UNITID ipeds_id CHAR(6) COMMENT 'Unique identification number of the institution',
@@ -677,42 +719,20 @@ ALTER TABLE institution_diversity
 	CHANGE COLUMN XHRNRALM nonresident_alien_men_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Nonresident alien men(Imputed Code)',
 	CHANGE COLUMN HRNRALW nonresident_alien_women INT COMMENT 'Nonresident alien women', 
 	CHANGE COLUMN XHRNRALW nonresident_alien_women_imp ENUM('A', 'B', 'C', 'D', 'G', 'H', 'J', 'K', 'L', 'N', 'P', 'R', 'Z') COMMENT 'Nonresident alien women(Imputed Code)';
+-- Delete rows that don't have a match in the bridge table
+DELETE FROM institution_diversity 
+	WHERE ipeds_id NOT IN (SELECT ipeds_id FROM institution_to_congress);
 
-		
 
 /*
-	Drop previous FK constraints from Week 3
-*/
-ALTER TABLE institution_to_congress
-    DROP CONSTRAINT fk_house_id;
-ALTER TABLE institution_to_congress
-    DROP CONSTRAINT fk_senate1_id;
-ALTER TABLE institution_to_congress
-    DROP CONSTRAINT fk_senate2_id;
-ALTER TABLE institution_to_congress
-    DROP CONSTRAINT fk_ipeds_id;
-ALTER TABLE institution
-    DROP CONSTRAINT fk_naics_code;
-ALTER TABLE institution
-    DROP CONSTRAINT fk_state_postal_abbrevation;
-ALTER TABLE institution
-    DROP PRIMARY KEY;
-ALTER TABLE institution_to_congress
-    DROP PRIMARY KEY;
+    Recreate PK and FK constraints
+*/		
 
--- Drop former institution table
-DROP TABLE institution;
-
--- Rename institution_temp to instituion
-RENAME TABLE institution_temp TO institution;
-
-
--- Set PKs for institution and linking table
+-- Set PKs for institution and bridge table
 ALTER TABLE institution
     ADD PRIMARY KEY (ipeds_id);
 ALTER TABLE institution_to_congress
     ADD PRIMARY KEY (ipeds_id);
-
 -- Add FKs to congress table	
 ALTER TABLE institution_to_congress
     ADD CONSTRAINT fk_house_id_to_congress
@@ -726,7 +746,6 @@ ALTER TABLE institution_to_congress
     ADD CONSTRAINT fk_senate2_id_to_congress
         FOREIGN KEY (senate2_id)
         REFERENCES congress(id);
-
 -- Add FKs to institution table
 ALTER TABLE institution_to_congress
     ADD CONSTRAINT fk_ipeds_id_to_institution
@@ -740,14 +759,54 @@ ALTER TABLE institution
     ADD CONSTRAINT fk_institution_state_postal_abbrevation_to_us_states
         FOREIGN KEY (state)
         REFERENCES us_states_territories(postal_abbreviation);
-
 -- Add FK to institution_admissions
 ALTER TABLE institution_admissions
     ADD CONSTRAINT fk_institution_admissions_to_institution
     FOREIGN KEY (ipeds_id) REFERENCES institution(ipeds_id);
-
 -- Add FK to institution_salaries
 ALTER TABLE institution_salaries
     ADD CONSTRAINT fk_institution_salaries_to_institution
     FOREIGN KEY (ipeds_id) REFERENCES institution(ipeds_id);
+-- Add FK to institution_diversity
+ALTER TABLE institution_diversity
+    ADD CONSTRAINT fk_institution_diversity_to_institution
+    FOREIGN KEY (ipeds_id) REFERENCES institution(ipeds_id);
 
+/*
+	Create institution_imputation_description reference table and populate the code/description
+*/
+-- Create institution_imputation_description table
+DROP TABLE IF EXISTS institution_imputation_description;
+CREATE TABLE institution_imputation_description (
+    code CHAR(1),
+    description VARCHAR(100),
+	PRIMARY KEY (code));
+
+-- Insert values into the institution_imputation_description table for reporting purposes
+INSERT INTO institution_imputation_description (code, description)
+    VALUES 
+    ('A', 'Not applicable'),
+    ('B', 'Institution left item blank'),
+    ('C', 'Analyst corrected reported value'),
+    ('D', 'Do not know'),
+    ('G', 'Data generated from other data values'),
+    ('H', 'Value not derived - data not usable'),
+    ('J', 'Logical imputation'),
+    ('K', 'Ratio adjustment'),
+    ('L', 'Imputed using the Group Median procedure'),
+    ('N', 'Imputed using Nearest Neighbor procedure'),
+    ('P', 'Imputed using Carry Forward procedure'),
+    ('R', 'Reported'),
+    ('Z', 'Implied zero');
+
+/*
+    Move 2018 data to mytemp database and remove from mydatabase
+*/
+DROP TABLE IF EXISTS mytemp.institution_2018;
+CREATE TABLE mytemp.institution_2018 AS
+    SELECT * FROM institution_2018;
+DROP TABLE IF EXISTS mytemp.institution_2018_to_congress;
+CREATE TABLE mytemp.institution_2018_to_congress AS
+    SELECT * FROM institution_2018_to_congress;
+DROP TABLE IF EXISTS mydatabase.institution_2018;
+DROP TABLE IF EXISTS mydatabase.institution_2018_to_congress;
