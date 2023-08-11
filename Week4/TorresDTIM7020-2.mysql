@@ -88,12 +88,12 @@ DROP TABLE IF EXISTS institution_2018;
 CREATE TABLE institution_2018 AS
 	SELECT * FROM institution;
 
--- Drop and recreate institution_temp table
-DROP TABLE IF EXISTS institution_temp;
-CREATE TABLE institution_temp AS
+-- Drop and recreate institution table
+DROP TABLE IF EXISTS institution;
+CREATE TABLE institution AS
 	SELECT * FROM mytemp.hd2021;
 
-UPDATE institution_temp SET
+UPDATE institution SET
 	INSTNM = CASE WHEN INSTNM = '' THEN 'Not Available' ELSE INSTNM END, #TEXT
 	IALIAS = CASE WHEN IALIAS = '' THEN NULL ELSE IALIAS END,
 	ADDR = CASE WHEN ADDR = '' THEN 'Not Available' ELSE ADDR END,
@@ -169,7 +169,7 @@ UPDATE institution_temp SET
 	DFRCUSCG = CASE WHEN DFRCUSCG = '' THEN '-9' ELSE DFRCUSCG END; 
 
 -- Change column names, types and add comment
-ALTER TABLE institution_temp
+ALTER TABLE institution
 	CHANGE COLUMN UNITID ipeds_id CHAR(6) COMMENT 'Unique identification number of the institution',
 	CHANGE COLUMN INSTNM institution_name TEXT COMMENT 'Institution (entity) name',
 	CHANGE COLUMN IALIAS institution_name_alias TEXT COMMENT 'Institution name alias',
@@ -250,7 +250,7 @@ ALTER TABLE institution_temp
 */
 
 -- Drop table to encode if it exists
-DROP TABLE IF EXISTS institution_encode_congress ;
+DROP TABLE IF EXISTS institution_encode_congress;
 -- Create table to be encoded with with congressional information
 CREATE TABLE institution_encode_congress AS
 	SELECT ipeds_id, 
@@ -267,7 +267,7 @@ SELECT * INTO OUTFILE '/institution_encode_congress.csv'
 -- Use geocod.io to enclode congressional districts by lat/long
 */
 -- Import table from CSV file
-LOAD DATA INFILE '/institution_encode_congress.csv' 
+LOAD DATA INFILE '/institution_encoded_congress.csv' 
 	INTO TABLE institution_encoded_congress 
 	FIELDS TERMINATED BY ',' 
 	ENCLOSED BY '"' 
@@ -290,15 +290,21 @@ UPDATE institution_to_congress
 	SET senate1_id = MIN(congress.id),
 		senate2_id = MAX(congress.id)
     WHERE congress.chamber_id = 1;
+-- Update data types
+ALTER TABLE institution_to_congress 
+    MODIFY ipeds_id CHAR(6),
+    MODIFY state CHAR(2),
+    MODIFY district CHAR(5),
+    MODIFY house1_id CHAR(7),
+    MODIFY senate1_id CHAR(7),
+    MODIFY senate2_id CHAR(7);
+
 -- Drop any rows without state abbreviations
 DELETE FROM institution_to_congress WHERE state IS NULL;
 -- Delete rows that have not been encoded and don't have a link back to the 118th congress
-DELETE FROM institution_temp 
+DELETE FROM institution 
 	WHERE ipeds_id NOT IN (SELECT ipeds_id FROM institution_to_congress);
--- Drop former institution table
-DROP TABLE institution;
--- Rename institution_temp to instituion
-RENAME TABLE institution_temp TO institution;
+
 
 /*
 	Create the institution_admission table and populate with calendar year 2021 data 
@@ -752,12 +758,8 @@ ALTER TABLE institution_to_congress
         FOREIGN KEY (ipeds_id)
         REFERENCES institution(ipeds_id);
 ALTER TABLE institution
-    ADD CONSTRAINT fk_institution_naics_code_to_naics
-        FOREIGN KEY (naics_code)
-        REFERENCES naics(code);
-ALTER TABLE institution
     ADD CONSTRAINT fk_institution_state_postal_abbrevation_to_us_states
-        FOREIGN KEY (state)
+        FOREIGN KEY (state_abbreviation)
         REFERENCES us_states_territories(postal_abbreviation);
 -- Add FK to institution_admissions
 ALTER TABLE institution_admissions
