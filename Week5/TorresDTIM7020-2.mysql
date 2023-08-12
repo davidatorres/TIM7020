@@ -1,0 +1,4 @@
+USE mydatabase;
+
+CREATE TABLE institution_employment AS
+    SELECT * FROM mytemp.eap2021;
