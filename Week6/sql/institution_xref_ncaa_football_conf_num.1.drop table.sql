@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS institution_ic_offerings;
+DROP TABLE IF EXISTS institution_xref_ncaa_football_conf_num;

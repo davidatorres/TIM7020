@@ -1,1 +1,7 @@
-CREATE TABLE institution_ic_offerings (inst_id INTEGER);
+
+            CREATE TABLE institution_xref_aid_collection_form_type (
+                Codevalue TINYINT,
+                valueLabel VARCHAR(255),
+                valueOrder SMALLINT UNSIGNED,
+                PRIMARY KEY (Codevalue)
+            );

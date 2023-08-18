@@ -1,1 +1,7 @@
-CREATE TABLE institution_ic_offerings (inst_id INTEGER);
+
+            CREATE TABLE institution_xref_status_entering_class_retention_rates (
+                Codevalue TINYINT,
+                valueLabel VARCHAR(255),
+                valueOrder SMALLINT UNSIGNED,
+                PRIMARY KEY (Codevalue)
+            );

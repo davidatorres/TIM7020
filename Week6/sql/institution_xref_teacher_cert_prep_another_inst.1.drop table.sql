@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS institution_ic_offerings;
+DROP TABLE IF EXISTS institution_xref_teacher_cert_prep_another_inst;

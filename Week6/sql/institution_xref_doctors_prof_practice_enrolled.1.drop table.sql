@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS institution_ic_offerings;
+DROP TABLE IF EXISTS institution_xref_doctors_prof_practice_enrolled;

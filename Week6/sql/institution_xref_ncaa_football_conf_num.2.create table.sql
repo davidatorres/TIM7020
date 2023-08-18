@@ -1,1 +1,7 @@
-CREATE TABLE institution_ic_offerings (inst_id INTEGER);
+
+            CREATE TABLE institution_xref_ncaa_football_conf_num (
+                Codevalue SMALLINT,
+                valueLabel VARCHAR(255),
+                valueOrder SMALLINT UNSIGNED,
+                PRIMARY KEY (Codevalue)
+            );

@@ -87,7 +87,7 @@ ALTER TABLE institution_ic_offerings
     ADD COLUMN all_distance_programs TINYINT COMMENT "DISTNCED|All programs offered completely via distance education",
     ADD COLUMN percent_students_disabilities TINYINT COMMENT "DISAB|Percent indicator of undergraduates formally registered as students with disabilities",
   ADD COLUMN percent_students_disabilities_gt3_imp ENUM('A','B','C','D','G','H','J','K','L','N','P','R','Z','') COMMENT "DISABPCT|Percent of undergraduates, who are formally registered as students with disabilities, when percentage is more than 3 percent",
-    ADD COLUMN percent_students_disabilities_gt3 SMALLINT COMMENT "DISABPCT|Percent of undergraduates, who are formally registered as students with disabilities, when percentage is more than 3 percent",
+    ADD COLUMN percent_students_disabilities_gt3 FLOAT COMMENT "DISABPCT|Percent of undergraduates, who are formally registered as students with disabilities, when percentage is more than 3 percent",
     ADD COLUMN required_on_campus_residence TINYINT COMMENT "ALLONCAM|Full-time, first-time degree/certificate-seeking students required to live on campus",
     ADD COLUMN tuition_charge_varies TINYINT COMMENT "TUITVARY|Tuition charge varies for in-district, in-state, out-of-state students",
     ADD COLUMN on_campus_housing TINYINT COMMENT "ROOM|Institution provide on-campus housing",
