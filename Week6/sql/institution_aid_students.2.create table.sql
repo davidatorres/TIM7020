@@ -1,0 +1,1 @@
+CREATE TABLE institution_aid_students (inst_id INTEGER);

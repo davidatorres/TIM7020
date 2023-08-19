@@ -1,0 +1,1 @@
+CREATE TABLE institution_gr_grants_loans (inst_id INTEGER);

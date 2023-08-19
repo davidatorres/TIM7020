@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_comp_conf_race_gender;

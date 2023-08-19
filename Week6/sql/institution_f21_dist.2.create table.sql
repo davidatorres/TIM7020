@@ -1,0 +1,1 @@
+CREATE TABLE institution_f21_dist (inst_id INTEGER);

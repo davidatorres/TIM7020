@@ -1,0 +1,1 @@
+CREATE TABLE institution_comp_dist (inst_id INTEGER);

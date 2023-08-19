@@ -2,6 +2,6 @@
             CREATE TABLE institution_xref_csa (
                 Codevalue SMALLINT,
                 valueLabel VARCHAR(255),
-                valueOrder SMALLINT UNSIGNED,
+                valueOrder MEDIUMINT UNSIGNED,
                 PRIMARY KEY (Codevalue)
             );

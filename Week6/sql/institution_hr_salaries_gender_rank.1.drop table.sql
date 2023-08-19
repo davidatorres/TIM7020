@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_hr_salaries_gender_rank;

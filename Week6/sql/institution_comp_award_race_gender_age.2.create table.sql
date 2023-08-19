@@ -1,0 +1,1 @@
+CREATE TABLE institution_comp_award_race_gender_age (inst_id INTEGER);

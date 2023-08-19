@@ -1,0 +1,1 @@
+CREATE TABLE institution_ic_academic_charges (inst_id INTEGER);

@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_hr_newhires_occupations_race_gender;
