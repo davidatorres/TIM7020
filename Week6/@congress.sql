@@ -39,9 +39,9 @@ CREATE TABLE `congress` (
   KEY `fk_party_id` (`party_id`),
   KEY `fk_state` (`state`),
   KEY `fk_chamber_id` (`chamber_id`),
-  CONSTRAINT `fk_chamber_id` FOREIGN KEY (`chamber_id`) REFERENCES `congress_chamber` (`id`),
-  CONSTRAINT `fk_party_id` FOREIGN KEY (`party_id`) REFERENCES `congress_party` (`id`),
-  CONSTRAINT `fk_state` FOREIGN KEY (`state`) REFERENCES `congress_state` (`postal_abbreviation`)
+  CONSTRAINT `fk_congress_chamber_id` FOREIGN KEY (`chamber_id`) REFERENCES `congress_chamber` (`id`),
+  CONSTRAINT `fk_congress_party_id` FOREIGN KEY (`party_id`) REFERENCES `congress_party` (`id`),
+  CONSTRAINT `fk_congress_state` FOREIGN KEY (`state`) REFERENCES `institution_xref_state` (`Codevalue`)
 );
 
 CREATE TABLE `congress_office` (
@@ -54,7 +54,8 @@ CREATE TABLE `congress_office` (
   `state` char(2) DEFAULT NULL,
   `zip` varchar(10) DEFAULT NULL,
   KEY `fk_congress_office_congress` (`id`),
-  CONSTRAINT `fk_congress_office_congress` FOREIGN KEY (`id`) REFERENCES `congress` (`id`)
+  CONSTRAINT `fk_congress_office_congress` FOREIGN KEY (`id`) REFERENCES `congress` (`id`),
+  CONSTRAINT `fk_congress_office_state` FOREIGN KEY (`state`) REFERENCES `institution_xref_state` (`Codevalue`)
 );
 
 CREATE TABLE `institution_to_congress` (

@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_fy_enroll_dist;

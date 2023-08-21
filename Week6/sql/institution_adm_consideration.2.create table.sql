@@ -1,0 +1,1 @@
+CREATE TABLE institution_adm_consideration (inst_id INTEGER);

@@ -1,1 +1,0 @@
-CREATE TABLE institution_ic_campuses (inst_id INTEGER);

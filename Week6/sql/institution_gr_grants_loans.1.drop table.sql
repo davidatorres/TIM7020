@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_gr_grants_loans;

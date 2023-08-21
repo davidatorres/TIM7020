@@ -1,4 +1,4 @@
 
-        ALTER TABLE institution_comp_award_race_gender_age 
-            ADD FOREIGN KEY (inst_id) REFERENCES institution(inst_id), 
-            ADD CHECK (award_level_cd IN (3, 5, 7, 9, 10, 11, 12, 2));
+            ALTER TABLE institution_comp_award_race_gender_age 
+                ADD FOREIGN KEY (inst_id) REFERENCES institution(inst_id),
+                ADD FOREIGN KEY (award_level_cd) REFERENCES institution_xref_award_level_cd(Codevalue);

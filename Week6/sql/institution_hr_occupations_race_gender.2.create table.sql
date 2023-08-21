@@ -1,1 +1,0 @@
-CREATE TABLE institution_hr_occupations_race_gender (inst_id INTEGER);
