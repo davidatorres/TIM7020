@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_xref_completion_college_prep_program;

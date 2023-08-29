@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_xref_response_status_graduation_rates_200;

@@ -1,1 +1,0 @@
-CREATE TABLE institution_aid_benefit (inst_id INTEGER);

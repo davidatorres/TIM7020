@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_xref_formal_demonstration_competencies;

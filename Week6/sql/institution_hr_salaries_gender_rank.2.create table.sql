@@ -1,1 +1,0 @@
-CREATE TABLE institution_hr_salaries_gender_rank (inst_id INTEGER);

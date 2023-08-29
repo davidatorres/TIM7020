@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_xref_college_level_work_required;

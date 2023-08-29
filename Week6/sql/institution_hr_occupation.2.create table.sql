@@ -1,1 +1,0 @@
-CREATE TABLE institution_hr_occupation (inst_id INTEGER);

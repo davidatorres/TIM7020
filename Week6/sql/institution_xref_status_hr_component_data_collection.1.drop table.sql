@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_xref_status_hr_component_data_collection;

@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_xref_measure_3rd_program;

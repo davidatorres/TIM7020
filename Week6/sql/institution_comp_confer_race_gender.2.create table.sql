@@ -1,1 +1,0 @@
-CREATE TABLE institution_comp_confer_race_gender (inst_id INTEGER);

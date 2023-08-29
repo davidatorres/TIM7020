@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_xref_meal_plan;

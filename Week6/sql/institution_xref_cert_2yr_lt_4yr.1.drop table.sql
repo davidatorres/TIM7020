@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_xref_cert_2yr_lt_4yr;

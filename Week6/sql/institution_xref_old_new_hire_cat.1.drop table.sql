@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_xref_old_new_hire_cat;

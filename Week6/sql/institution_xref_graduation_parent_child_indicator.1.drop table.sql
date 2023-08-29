@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_xref_graduation_parent_child_indicator;

@@ -1,1 +1,0 @@
-CREATE TABLE institution_gr_grant_loan (inst_id INTEGER);

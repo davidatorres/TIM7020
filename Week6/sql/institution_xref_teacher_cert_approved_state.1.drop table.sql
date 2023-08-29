@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_xref_teacher_cert_approved_state;

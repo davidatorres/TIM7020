@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_xref_part_time_deg_cert_undergrad_enrolled;

@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_xref_fulltime_firsttime_undergrad_enrolled;

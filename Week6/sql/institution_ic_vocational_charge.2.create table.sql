@@ -1,1 +1,0 @@
-CREATE TABLE institution_ic_vocational_charge (inst_id INTEGER);

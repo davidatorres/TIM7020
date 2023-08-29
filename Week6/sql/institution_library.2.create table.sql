@@ -1,1 +1,0 @@
-CREATE TABLE institution_library (inst_id INTEGER);

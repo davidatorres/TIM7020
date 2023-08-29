@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_xref_doctors_prof_practice_enrolled_first_prof;

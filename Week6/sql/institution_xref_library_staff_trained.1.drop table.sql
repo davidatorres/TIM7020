@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_xref_library_staff_trained;

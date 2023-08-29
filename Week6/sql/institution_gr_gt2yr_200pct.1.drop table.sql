@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_gr_gt2yr_200pct;

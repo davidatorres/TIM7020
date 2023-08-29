@@ -1,1 +1,0 @@
-CREATE TABLE institution_ic_academic_offering (inst_id INTEGER);

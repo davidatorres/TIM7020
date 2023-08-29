@@ -1,1 +1,0 @@
-CREATE TABLE institution_f21_y1_residence (inst_id INTEGER);

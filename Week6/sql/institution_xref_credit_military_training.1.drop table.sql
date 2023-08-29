@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_xref_credit_military_training;

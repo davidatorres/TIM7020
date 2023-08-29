@@ -1,1 +1,0 @@
-CREATE TABLE institution_fin_not_for_profit (inst_id INTEGER);

@@ -1,1 +1,0 @@
-CREATE TABLE institution_fy_enroll_headcount (inst_id INTEGER);

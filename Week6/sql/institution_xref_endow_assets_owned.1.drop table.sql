@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_xref_endow_assets_owned;

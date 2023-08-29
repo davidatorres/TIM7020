@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_xref_fips_state_code;

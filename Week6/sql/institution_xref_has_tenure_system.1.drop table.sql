@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS institution_xref_has_tenure_system;

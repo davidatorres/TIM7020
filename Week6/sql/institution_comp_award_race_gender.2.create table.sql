@@ -1,1 +1,0 @@
-CREATE TABLE institution_comp_award_race_gender (inst_id INTEGER);
