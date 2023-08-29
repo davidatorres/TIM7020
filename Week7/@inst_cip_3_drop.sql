@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS temp_cip;
+DROP TABLE IF EXISTS temp_alter;
+DROP TABLE IF EXISTS temp_drop;
+DROP TABLE IF EXISTS temp_add;
+DROP TABLE IF EXISTS temp_command;
