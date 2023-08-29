@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_xref_enrollment_parent_child_indicator;

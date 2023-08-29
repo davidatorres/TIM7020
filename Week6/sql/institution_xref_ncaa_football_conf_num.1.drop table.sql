@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_xref_ncaa_football_conf_num;

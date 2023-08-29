@@ -1,0 +1,1 @@
+CREATE TABLE institution_fy_enroll_distance (inst_id INTEGER);

@@ -1,0 +1,1 @@
+CREATE TABLE institution_fin_public (inst_id INTEGER);

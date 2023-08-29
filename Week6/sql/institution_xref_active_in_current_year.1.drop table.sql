@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_xref_active_in_current_year;

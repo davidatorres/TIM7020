@@ -1,0 +1,1 @@
+CREATE TABLE institution_f21_enroll_race_gender (inst_id INTEGER);

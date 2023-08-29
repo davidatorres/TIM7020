@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_xref_required_on_campus_residence;

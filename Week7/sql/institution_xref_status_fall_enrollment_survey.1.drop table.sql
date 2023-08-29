@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_xref_status_fall_enrollment_survey;

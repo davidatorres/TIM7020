@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_xref_ope_eligibility_code;

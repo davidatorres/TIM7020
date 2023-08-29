@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_ic_academic_offering;

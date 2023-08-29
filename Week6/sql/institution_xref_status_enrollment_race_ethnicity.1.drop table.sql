@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_xref_status_enrollment_race_ethnicity;

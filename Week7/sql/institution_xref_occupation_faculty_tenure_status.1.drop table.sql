@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_xref_occupation_faculty_tenure_status;

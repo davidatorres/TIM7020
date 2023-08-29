@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_xref_multi_inst_org;

@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_comp_award_race_gender;

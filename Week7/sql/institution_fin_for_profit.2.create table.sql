@@ -1,0 +1,1 @@
+CREATE TABLE institution_fin_for_profit (inst_id INTEGER);

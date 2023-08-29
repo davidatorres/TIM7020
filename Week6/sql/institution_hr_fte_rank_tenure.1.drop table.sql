@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_hr_fte_rank_tenure;

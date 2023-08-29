@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_xref_imputation_method_academic_libraries;

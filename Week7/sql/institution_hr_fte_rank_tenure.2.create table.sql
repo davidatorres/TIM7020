@@ -1,0 +1,1 @@
+CREATE TABLE institution_hr_fte_rank_tenure (inst_id INTEGER);

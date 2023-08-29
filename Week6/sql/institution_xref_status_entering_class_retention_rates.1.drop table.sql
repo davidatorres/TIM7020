@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_xref_status_entering_class_retention_rates;

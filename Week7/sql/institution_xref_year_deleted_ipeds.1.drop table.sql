@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_xref_year_deleted_ipeds;

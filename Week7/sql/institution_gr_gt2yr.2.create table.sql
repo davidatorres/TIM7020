@@ -1,0 +1,1 @@
+CREATE TABLE institution_gr_gt2yr (inst_id INTEGER);

@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_fin_not_for_profit;

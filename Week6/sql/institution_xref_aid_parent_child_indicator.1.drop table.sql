@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_xref_aid_parent_child_indicator;

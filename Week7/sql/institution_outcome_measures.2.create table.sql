@@ -1,0 +1,1 @@
+CREATE TABLE institution_outcome_measures (inst_id INTEGER);

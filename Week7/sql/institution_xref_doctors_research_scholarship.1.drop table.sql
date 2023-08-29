@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_xref_doctors_research_scholarship;

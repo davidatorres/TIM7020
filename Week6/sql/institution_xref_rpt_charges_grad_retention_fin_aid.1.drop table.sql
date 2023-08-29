@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_xref_rpt_charges_grad_retention_fin_aid;

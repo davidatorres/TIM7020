@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_xref_academic_career_counseling;

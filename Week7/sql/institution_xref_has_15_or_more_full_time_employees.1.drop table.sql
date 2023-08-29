@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_xref_has_15_or_more_full_time_employees;

@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_f21_enroll_race_gender;

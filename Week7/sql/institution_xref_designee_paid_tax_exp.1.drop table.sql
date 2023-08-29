@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS institution_xref_designee_paid_tax_exp;
