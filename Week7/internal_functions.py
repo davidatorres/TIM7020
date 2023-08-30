@@ -60,7 +60,7 @@ def execute_dbquery(query, db=None, cursor=None):
         print(f"Failed creating database with query: {query} - Error: {e}")
     
 def write_sql_file(sql_file, sql_query):
-    with open(f'sql/{sql_file}.sql', 'w') as f:
+    with open(f'sql_generated/{sql_file}.sql', 'w') as f:
         f.write(sql_query)
 
 def dtype_by_format(format, dtype, width):
